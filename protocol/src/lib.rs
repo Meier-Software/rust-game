@@ -1,8 +1,5 @@
-use specs::{prelude::*, Component};
+use specs::{World, WorldExt};
 
-
-#[derive(Component)]
-#[storage(VecStorage)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -17,7 +14,7 @@ pub enum Facing {
 }
 
 pub enum ServerToClient {
-    EntityMoved(EntityId, Position),
+    EntityMoved(Position),
 }
 
 pub enum ClientToServer {
