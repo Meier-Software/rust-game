@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use engine::Engine;
 
 mod engine;
-mod net;
+// mod net;
 
 pub fn main() {
     let resource_dir = PathBuf::from("./client/assets");

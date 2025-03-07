@@ -15,8 +15,6 @@ pub struct Event {
 
 impl Event {
     pub fn new(event: String) -> Self {
-        Self {
-            event,
-        }
+        Self { event }
     }
 }

@@ -14,8 +14,11 @@ impl Position {
 
 pub fn world_register(world: &mut World) {
     world.register::<Position>();
+    world.register::<Facing>();
 }
 
+#[derive(Component)]
+#[storage(VecStorage)]
 pub enum Facing {
     North,
     East,

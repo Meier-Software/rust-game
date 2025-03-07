@@ -1,12 +1,13 @@
-use crate::net::{NetClient, NetworkingOut};
+use net::NetworkingIn;
+use net::{NetClient, NetworkingOut};
+
 use event::{Event, EventType};
 use ggez::Context;
 use protocol::Position;
 use specs::{Builder, RunNow, World, WorldExt};
-use crate::net::NetworkingIn;
-
 
 pub mod event;
+mod net;
 mod render;
 
 pub enum State {
@@ -50,9 +51,6 @@ impl Engine {
         let mut net_in_system = NetworkingIn {};
         net_in_system.run_now(&self.world);
 
-
-
-
         match self.state {
             State::PreAuth => {
                 let username = "hjk";
@@ -72,9 +70,8 @@ impl Engine {
             State::InGame => {
                 // TODO: While InGame render player.
                 todo!()
-            },
+            }
         }
-
 
         // Handle Net Events.
         let mut net_system = NetworkingOut {};
@@ -84,16 +81,11 @@ impl Engine {
         self.world.maintain();
     }
 
-
-    pub fn close(&mut self) {
-        
-        
-    }
+    pub fn close(&mut self) {}
 }
 
 impl Engine {
     pub fn fire_event(&mut self, event_type: EventType, event: String) {
-
         // println!("fired {:?} - {}", event_type, event);
         let event = Event::new(event);
         self.world
