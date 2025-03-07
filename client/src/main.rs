@@ -1,9 +1,11 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use ggez::{
     Context, GameResult, event,
     graphics::{self, Color, DrawParam, Image, Rect},
     mint::Point2,
+    input::keyboard::{self, KeyCode},
 };
 use net::NetClient;
 use protocol::Position;
@@ -49,8 +51,10 @@ impl GameState {
             }
         };
 
+        // Send registration/login command
         nc.send("register abc 123\r\n".to_string());
-
+        // Wait a bit for server response
+        std::thread::sleep(Duration::from_millis(100));
 
         let pos = Position::new(100.0, 100.0); // Start at a more visible position
 
@@ -66,17 +70,40 @@ impl GameState {
         match self.stage {
             Stage::PreAuth => {
                 // println!("Pre Auth");
-                // self.stage = Stage::InGame;
                 let line = self.nc.recv();
                 match line {
-                    Ok(ok) => println!("{}", ok),
+                    Ok(ok) => {
+                        println!("{}", ok);
+                        // Check if login was successful and transition to InGame
+                        if ok.contains("Logged in") || ok.contains("Registered user") {
+                            println!("Authentication successful, entering game");
+                            self.stage = Stage::InGame;
+                        }
+                    },
                     Err(err) => match err {
-                        net::NCError::NoNewData => {}
+                        net::NCError::NoNewData => {},
+                        net::NCError::ConnectionError(e) => {
+                            println!("Connection error: {}", e);
+                        }
                     },
                 }
             }
             Stage::InMenu => {}
-            Stage::InGame => {}
+            Stage::InGame => {
+                // Check for server messages
+                let line = self.nc.recv();
+                match line {
+                    Ok(ok) => println!("Server: {}", ok),
+                    Err(err) => match err {
+                        net::NCError::NoNewData => {},
+                        net::NCError::ConnectionError(e) => {
+                            println!("Connection error: {}", e);
+                            // Optionally transition back to PreAuth stage
+                            // self.stage = Stage::PreAuth;
+                        }
+                    },
+                }
+            }
         }
     }
 
@@ -85,6 +112,17 @@ impl GameState {
 
         match self.stage {
             Stage::PreAuth => {
+                // Draw login/authentication screen
+                let screen_width = ctx.gfx.window().inner_size().width as f32;
+                let screen_height = ctx.gfx.window().inner_size().height as f32;
+                
+                // Draw text for login screen
+                let text = graphics::Text::new("Authenticating...");
+                let text_pos = [screen_width / 2.0 - 50.0, screen_height / 2.0];
+                canvas.draw(&text, DrawParam::default().dest(text_pos).color(Color::WHITE));
+            }
+            Stage::InMenu => {}
+            Stage::InGame => {
                 let screen_width = ctx.gfx.window().inner_size().width as f32;
                 let screen_height = ctx.gfx.window().inner_size().height as f32;
 
@@ -94,23 +132,16 @@ impl GameState {
                 canvas.set_screen_coordinates(Rect::new(0.0, 0.0, zoomed_width, zoomed_height));
 
                 // Draw the player sprite at the correct position
-                // No need for src_rect unless you're using a sprite sheet
                 let draw_params = DrawParam::default()
-                    // Use dest instead of offset for positioning
                     .dest([self.pos.x, self.pos.y])
-                    // Use a reasonable scale (or remove if 1.0)
                     .scale([1.0, 1.0]);
 
                 canvas.draw(&self.sp, draw_params);
 
-                // Debug info
-                // println!(
-                //     "Drawing player at position: ({}, {})",
-                //     self.pos.x, self.pos.y
-                // );
+                // Draw position info for debugging
+                let pos_text = graphics::Text::new(format!("Pos: ({:.1}, {:.1})", self.pos.x, self.pos.y));
+                canvas.draw(&pos_text, DrawParam::default().dest([10.0, 10.0]).color(Color::WHITE));
             }
-            Stage::InMenu => {}
-            Stage::InGame => {}
         }
 
         canvas.finish(ctx).unwrap();
@@ -119,13 +150,72 @@ impl GameState {
 
 impl event::EventHandler<ggez::GameError> for GameState {
     // Update once per tick.
-    fn update(&mut self, _ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+    fn update(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+        // Handle keyboard input for movement
+        if self.stage == Stage::InGame {
+            let mut dx = 0.0;
+            let mut dy = 0.0;
+
+            if keyboard::is_key_pressed(ctx, KeyCode::Up) || keyboard::is_key_pressed(ctx, KeyCode::W) {
+                dy -= MOVEMENT_SPEED;
+            }
+            if keyboard::is_key_pressed(ctx, KeyCode::Down) || keyboard::is_key_pressed(ctx, KeyCode::S) {
+                dy += MOVEMENT_SPEED;
+            }
+            if keyboard::is_key_pressed(ctx, KeyCode::Left) || keyboard::is_key_pressed(ctx, KeyCode::A) {
+                dx -= MOVEMENT_SPEED;
+            }
+            if keyboard::is_key_pressed(ctx, KeyCode::Right) || keyboard::is_key_pressed(ctx, KeyCode::D) {
+                dx += MOVEMENT_SPEED;
+            }
+
+            // If there's movement, update position and send to server
+            if dx != 0.0 || dy != 0.0 {
+                // Update local position
+                self.pos.x += dx;
+                self.pos.y += dy;
+                
+                // Ensure player stays within world bounds
+                self.pos.x = self.pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
+                self.pos.y = self.pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
+                
+                // Send movement command to server
+                // Convert to integer deltas for the server
+                let dx_int = dx as i32;
+                let dy_int = dy as i32;
+                if dx_int != 0 || dy_int != 0 {
+                    let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
+                    self.nc.send(move_cmd);
+                }
+            }
+        }
+
         self.run_stage();
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
         self.draw_stage(ctx);
+        Ok(())
+    }
+
+    // Add key_down_event handler for one-time key presses
+    fn key_down_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: ggez::input::keyboard::KeyMods, _repeat: bool) -> Result<(), ggez::GameError> {
+        match keycode {
+            KeyCode::Return => {
+                // Toggle between stages for testing
+                if self.stage == Stage::PreAuth {
+                    self.stage = Stage::InGame;
+                } else if self.stage == Stage::InGame {
+                    self.stage = Stage::PreAuth;
+                }
+            },
+            KeyCode::Escape => {
+                // Quit the game
+                ctx.request_quit();
+            },
+            _ => {}
+        }
         Ok(())
     }
 }

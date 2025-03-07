@@ -7,6 +7,7 @@ use std::{
 #[derive(Debug)]
 pub enum NCError {
     NoNewData,
+    ConnectionError(String),
 }
 
 pub struct NetClient {
@@ -16,28 +17,43 @@ pub struct NetClient {
 impl NetClient {
     pub fn new() -> Self {
         let addr = "game.ablecorp.us:45250";
-        let stream = TcpStream::connect(addr).unwrap();
+        let stream = match TcpStream::connect(addr) {
+            Ok(stream) => {
+                println!("Connected to server at {}", addr);
+                // Set non-blocking mode
+                let _ = stream.set_nonblocking(true);
+                stream
+            },
+            Err(e) => {
+                panic!("Failed to connect to server: {}", e);
+            }
+        };
 
         Self { tcp: stream }
     }
+    
     pub fn send(&mut self, string: String) {
-        println!("Net event sent.");
+        println!("Sending: {}", string.trim());
         let a = format!("{}", string);
-        let _ = self.tcp.write(a.as_bytes());
+        match self.tcp.write(a.as_bytes()) {
+            Ok(_) => {},
+            Err(e) => println!("Error sending data: {}", e),
+        }
     }
 
     pub fn recv(&mut self) -> Result<String, NCError> {
-        let mut string = String::new();
-
-        let dur: Duration = Duration::new(0, 1000);
-
-        let ret_to = self.tcp.set_read_timeout(Some(dur));
-        // println!("{:?}", ret_to);
-
-        let ret = self.tcp.read_to_string(&mut string);
-        match ret {
-            Ok(a) => Ok(string),
-            Err(err) => Err(NCError::NoNewData),
+        let mut buffer = [0; 1024];
+        
+        match self.tcp.read(&mut buffer) {
+            Ok(0) => Err(NCError::ConnectionError("Server closed connection".to_string())),
+            Ok(n) => {
+                let data = String::from_utf8_lossy(&buffer[0..n]).to_string();
+                Ok(data)
+            },
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                Err(NCError::NoNewData)
+            },
+            Err(e) => Err(NCError::ConnectionError(e.to_string())),
         }
     }
 }
