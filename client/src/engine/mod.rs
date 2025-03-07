@@ -37,21 +37,26 @@ impl Engine {
         protocol::world_register(&mut world);
 
         let pos = Position::new(0.0, 0.0);
-        let facing = Facing::North;
-        
+        let facing = protocol::Facing::South; // Default facing direction
 
+        // Create player entity with position and facing components
         world.create_entity()
-        .with(pos)
-        .with(facing)
-        .build();
+            .with(pos)
+            .with(facing)
+            .build();
 
         let nc = NetClient::new();
         world.insert(nc);
 
-        Self {
+        let mut engine = Self {
             state: State::PreAuth,
             world,
-        }
+        };
+        
+        // Initialize rendering resources
+        engine.init_rendering(ctx);
+        
+        engine
     }
 
     // X times per second. TickRate
@@ -110,7 +115,26 @@ impl Engine {
 }
 
 impl ggez::event::EventHandler<ggez::GameError> for Engine {
-    fn update(&mut self, _ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+    fn update(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+        // Update animation timer
+        {
+            let delta_time = ctx.time.delta().as_secs_f32();
+            let mut player_sprite = self.world.write_resource::<render::PlayerSprite>();
+            
+            // Update animation timer
+            player_sprite.animation_timer += delta_time;
+            if player_sprite.animation_timer >= render::ANIMATION_FRAME_TIME {
+                player_sprite.animation_timer = 0.0;
+                
+                // Get the number of frames in the sprite sheet
+                let sprite_width = player_sprite.sprite.width() as f32;
+                let frames_per_row = (sprite_width / render::SPRITE_SHEET_WIDTH) as usize;
+                
+                // Update animation frame
+                player_sprite.animation_frame = (player_sprite.animation_frame + 1) % frames_per_row;
+            }
+        }
+        
         // TODO: Get input from ctx.
         self.fixed_update();
         Ok(())
