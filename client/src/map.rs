@@ -5,9 +5,7 @@ use crate::assets::AssetManager;
 #[derive(Clone, Copy, PartialEq)]
 pub enum TileType {
     Empty,
-    WallMiddle,
-    WallLeft,
-    WallRight,
+    Wall,
 }
 
 // Define the map as a 2D grid with different tile types
@@ -19,8 +17,7 @@ pub struct Map {
 
 impl Map {
     pub fn new() -> Self {
-        // Start with a basic layout where 0 is empty and 1+ are different wall types
-        // We'll convert this to proper wall types
+        // Start with a basic layout where 0 is empty and 1 is wall
         let basic_grid = vec![
             vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -47,8 +44,8 @@ impl Map {
                 if basic_grid[y][x] == 0 {
                     grid[y][x] = TileType::Empty;
                 } else {
-                    // Determine wall type based on surrounding walls
-                    grid[y][x] = Self::determine_wall_type(&basic_grid, x, y, width, height);
+                    // All walls are the same type now
+                    grid[y][x] = TileType::Wall;
                 }
             }
         }
@@ -57,31 +54,6 @@ impl Map {
             grid,
             width,
             height,
-        }
-    }
-
-    // Helper function to determine the appropriate wall type based on surrounding walls
-    fn determine_wall_type(grid: &Vec<Vec<u8>>, x: usize, y: usize, width: usize, height: usize) -> TileType {
-        // Check if we're at an edge
-        let is_left = x == 0;
-        let is_right = x == width - 1;
-
-        // Check surrounding cells (if they exist)
-        let has_left = !is_left && grid[y][x-1] == 1;
-        let has_right = !is_right && grid[y][x+1] == 1;
-
-        // More explicit logic for determining wall types
-        // Left edge of a wall section (has wall to the right but not to the left)
-        if !has_left && has_right {
-            TileType::WallLeft
-        } 
-        // Right edge of a wall section (has wall to the left but not to the right)
-        else if has_left && !has_right {
-            TileType::WallRight
-        } 
-        // Middle of a wall section or standalone wall
-        else {
-            TileType::WallMiddle
         }
     }
 
@@ -107,16 +79,8 @@ impl Map {
         for y in 0..self.height {
             for x in 0..self.width {
                 if self.grid[y][x] != TileType::Empty {
-                    // Determine which wall asset to use based on the wall type
-                    let asset_name = match self.grid[y][x] {
-                        TileType::WallMiddle => "wall_middle",
-                        TileType::WallLeft => "wall_left",
-                        TileType::WallRight => "wall_right",
-                        _ => "wall_middle", // Fallback
-                    };
-                    
-                    // Draw the appropriate wall asset
-                    if let Some(wall_asset) = asset_manager.get_asset(asset_name) {
+                    // Use wall_middle for all walls
+                    if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
                         let dest = [x as f32 * grid_size, y as f32 * grid_size];
                         canvas.draw(
                             &wall_asset.img,

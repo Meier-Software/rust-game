@@ -47,10 +47,8 @@ impl GameState {
         let assets = [
             ("player", "/sprites/player/professor_walk_cycle_no_hat.png"),
             // Wall assets - using the available wall assets
-            ("wall", "/sprites/tiles/wall.png"), // Default wall
+            ("wall_middle", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"), // Default wall
             ("wall_middle", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"),
-            ("wall_left", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_left.png"),
-            ("wall_right", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_right.png"),
             // Floor asset
             ("floor", "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"),
         ];
