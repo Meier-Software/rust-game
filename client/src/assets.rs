@@ -1,3 +1,5 @@
+use ggez::graphics::Image;
+
 pub struct Asset {
  name: String,
  img: Image,
@@ -9,7 +11,8 @@ pub struct Asset {
 impl Asset{
  pub fn new()->Self{
   Self{
-   
-  }
+    name: todo!(),
+    img: todo!(),
+}
  }
 }
