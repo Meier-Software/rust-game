@@ -39,9 +39,17 @@ impl GameState {
     pub fn new(ctx: &mut ggez::Context) -> Self {
         let nc = NetClient::new();
 
-        let player_sprite =
-            Image::from_path(ctx, "/sprites/tiles/wall.png").expect("Failed to load wall sprite");
-        let pos = Position::new(10.0, 0.0);
+        // Load the sprite with proper error handling
+        let player_sprite = match Image::from_path(ctx, "/sprites/tiles/wall.png") {
+            Ok(img) => img,
+            Err(e) => {
+                println!("Failed to load sprite: {}", e);
+                // Try an alternative path as fallback
+                Image::from_path(ctx, "sprites/tiles/wall.png").expect("Failed to load sprite")
+            }
+        };
+        
+        let pos = Position::new(100.0, 100.0); // Start at a more visible position
 
         Self {
             stage: Stage::PreAuth,
@@ -67,9 +75,6 @@ impl GameState {
 
         match self.stage {
             Stage::PreAuth => {
-                let offset = [self.pos.x, self.pos.y];
-                let src_rect = Rect::new(self.pos.x, self.pos.y, 64.0, 64.0);
-
                 let screen_width = ctx.gfx.window().inner_size().width as f32;
                 let screen_height = ctx.gfx.window().inner_size().height as f32;
 
@@ -78,12 +83,16 @@ impl GameState {
                 
                 canvas.set_screen_coordinates(Rect::new(0.0, 0.0, zoomed_width, zoomed_height));
 
+                // Draw the player sprite at the correct position
+                // No need for src_rect unless you're using a sprite sheet
                 let draw_params = DrawParam::default()
-                    .offset(offset)
-                    .src(src_rect)
-                    .scale([64.0, 64.0]);
+                    .dest([self.pos.x, self.pos.y]) // Use dest instead of offset for positioning
+                    .scale([1.0, 1.0]); // Use a reasonable scale (or remove if 1.0)
 
                 canvas.draw(&self.sp, draw_params);
+                
+                // Debug info
+                println!("Drawing player at position: ({}, {})", self.pos.x, self.pos.y);
             }
             Stage::InMenu => {}
             Stage::InGame => {}
