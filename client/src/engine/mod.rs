@@ -1,14 +1,17 @@
+use assets::Asset;
 use net::NetworkingIn;
 use net::{NetClient, NetworkingOut};
 
 use event::{Event, EventType};
 use ggez::Context;
-use protocol::Position;
+use protocol::{Facing, Position};
+use render::RenderFrame;
 use specs::{Builder, RunNow, World, WorldExt};
 
 pub mod event;
 mod net;
 mod render;
+mod assets;
 
 pub enum State {
     PreAuth,
@@ -29,12 +32,18 @@ impl Engine {
         world.register::<NetClient>();
         world.register::<Event>();
         world.register::<EventType>();
+        world.register::<Asset>();
 
         protocol::world_register(&mut world);
 
         let pos = Position::new(0.0, 0.0);
+        let facing = Facing::North;
+        
 
-        world.create_entity().with(pos).build();
+        world.create_entity()
+        .with(pos)
+        .with(facing)
+        .build();
 
         let nc = NetClient::new();
         world.insert(nc);
@@ -72,6 +81,10 @@ impl Engine {
                 todo!()
             }
         }
+
+        let mut render_frame = RenderFrame;
+        render_frame.run_now(&self.world);
+
 
         // Handle Net Events.
         let mut net_system = NetworkingOut {};

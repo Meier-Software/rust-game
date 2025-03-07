@@ -1,6 +1,6 @@
 use specs::{Component, VecStorage, World, WorldExt};
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct Position {
     pub x: f32,
@@ -17,7 +17,7 @@ pub fn world_register(world: &mut World) {
     world.register::<Facing>();
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub enum Facing {
     North,

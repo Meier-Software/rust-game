@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use engine::Engine;
+use ggez::graphics::Image;
 
 mod engine;
 // mod net;
@@ -18,6 +19,13 @@ pub fn main() {
     let (mut ctx, event_loop) = cb.build().unwrap();
 
     let engine = Engine::new(&mut ctx);
+
+    // Asset loading.
+    // let a = Image::from_path(&ctx, "/sprites/player/professor_walk_cycle_no_hat.png")
+    //         .expect("Failed to load player sprite");
+    //     // engine.world
+
+
 
     ggez::event::run(ctx, event_loop, engine)
 }
