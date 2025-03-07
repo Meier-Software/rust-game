@@ -46,9 +46,13 @@ defmodule Player do
 
 
       {:client_send, line} ->
+        Logger.info "Player got client send event."
         send(client_pid, {:client_send, line})
+
       err ->
         Logger.info "#{inspect(err)}"
+        loop_player(client_pid, stats, info)
+
     after
       0 ->
         loop_player(client_pid, stats, info)

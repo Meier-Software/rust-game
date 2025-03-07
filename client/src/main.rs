@@ -107,6 +107,7 @@ impl GameState {
             Stage::InGame => {
                 // Check for server messages
                 let line = self.nc.recv();
+                // println!("{:?}", line);
                 match line {
                     Ok(ok) => println!("{}", ok),
                     Err(err) => match err {
