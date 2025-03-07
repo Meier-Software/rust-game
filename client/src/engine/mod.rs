@@ -1,0 +1,92 @@
+use crate::net::{NetClient, NetworkingOut};
+use event::{Event, EventType};
+use ggez::Context;
+use protocol::Position;
+use specs::{Builder, RunNow, World, WorldExt};
+use crate::net::NetworkingIn;
+
+
+pub mod event;
+mod render;
+
+pub enum State {
+    PreAuth,
+    // Represents you as being signed in and in a menu.
+    InMenu,
+    // Represents you as being signed in and in a game world.
+    InGame,
+}
+
+pub struct Engine {
+    state: State,
+    world: World,
+}
+
+impl Engine {
+    pub fn new(ctx: &mut Context) -> Self {
+        let mut world = World::new();
+        world.register::<NetClient>();
+        world.register::<Event>();
+        world.register::<EventType>();
+
+        protocol::world_register(&mut world);
+
+        let pos = Position::new(0.0, 0.0);
+
+        world.create_entity().with(pos).build();
+
+        let nc = NetClient::new();
+        world.insert(nc);
+
+        Self {
+            state: State::PreAuth,
+            world,
+        }
+    }
+
+    // X times per second. TickRate
+    pub fn fixed_update(&mut self) {
+        // Handle Net Events.
+        let mut net_in_system = NetworkingIn {};
+        net_in_system.run_now(&self.world);
+
+
+
+
+        match self.state {
+            State::PreAuth => {
+                let username = "hjk";
+                let password = "123";
+
+                let line = format!("login {} {}\r\n", username, password);
+                self.fire_event(EventType::NetSend, line);
+            }
+            State::InMenu => todo!(),
+            State::InGame => todo!(),
+        }
+
+
+        // Handle Net Events.
+        let mut net_system = NetworkingOut {};
+        net_system.run_now(&self.world);
+
+        // == ECS Maintain ==
+        self.world.maintain();
+    }
+
+    // Updated once per frame. FPSRate
+    pub fn fps_update(&mut self) {}
+
+    pub fn close(&mut self) {}
+}
+
+impl Engine {
+    pub fn fire_event(&mut self, event_type: EventType, event: String) {
+        let event = Event::new(event_type, event);
+        self.world
+            .create_entity()
+            .with(event_type.clone())
+            .with(event)
+            .build();
+    }
+}
