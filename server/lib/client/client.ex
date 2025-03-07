@@ -28,6 +28,8 @@ defmodule Client do
 
   defp process_line(line, client_socket) do
     cmds = Client.Commands.line_to_commands(line)
+    Logger.info inspect(cmds)
+
 
     case cmds do
       ["login", username, password] ->

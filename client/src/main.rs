@@ -37,7 +37,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(ctx: &mut ggez::Context) -> Self {
-        let nc = NetClient::new();
+        let mut nc = NetClient::new();
 
         // Load the sprite with proper error handling
         let player_sprite = match Image::from_path(ctx, "/sprites/tiles/wall.png") {
@@ -48,6 +48,9 @@ impl GameState {
                 Image::from_path(ctx, "sprites/tiles/wall.png").expect("Failed to load sprite")
             }
         };
+
+        nc.send("login abc 123\r\n".to_string());
+
 
         let pos = Position::new(100.0, 100.0); // Start at a more visible position
 
@@ -64,6 +67,13 @@ impl GameState {
             Stage::PreAuth => {
                 // println!("Pre Auth");
                 // self.stage = Stage::InGame;
+                let line = self.nc.recv();
+                match line {
+                    Ok(ok) => println!("{}", ok),
+                    Err(err) => match err {
+                        net::NCError::NoNewData => {}
+                    },
+                }
             }
             Stage::InMenu => {}
             Stage::InGame => {}
@@ -94,10 +104,10 @@ impl GameState {
                 canvas.draw(&self.sp, draw_params);
 
                 // Debug info
-                println!(
-                    "Drawing player at position: ({}, {})",
-                    self.pos.x, self.pos.y
-                );
+                // println!(
+                //     "Drawing player at position: ({}, {})",
+                //     self.pos.x, self.pos.y
+                // );
             }
             Stage::InMenu => {}
             Stage::InGame => {}
