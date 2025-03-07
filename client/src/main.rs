@@ -23,6 +23,7 @@ const DIALOGUE_HEIGHT: f32 = 150.0;
 
 mod net;
 
+#[derive(PartialEq)]
 pub enum Stage {
     PreAuth,
     InMenu,
@@ -146,6 +147,30 @@ impl GameState {
 
         canvas.finish(ctx).unwrap();
     }
+
+
+    // Add key_down_event handler for one-time key presses
+    fn key_down_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: ggez::input::keyboard::KeyMods, _repeat: bool) -> Result<(), ggez::GameError> {
+        match keycode {
+            KeyCode::Return => {
+                // Toggle between stages for testing
+                if self.stage == Stage::PreAuth {
+                    self.stage = Stage::InGame;
+                } else if self.stage == Stage::InGame {
+                    self.stage = Stage::PreAuth;
+                }
+            },
+            KeyCode::Escape => {
+                // Quit the game
+                ctx.request_quit();
+            },
+            _ => {}
+        }
+        Ok(())
+    }
+
+
+
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
@@ -196,26 +221,6 @@ impl event::EventHandler<ggez::GameError> for GameState {
 
     fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
         self.draw_stage(ctx);
-        Ok(())
-    }
-
-    // Add key_down_event handler for one-time key presses
-    fn key_down_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: ggez::input::keyboard::KeyMods, _repeat: bool) -> Result<(), ggez::GameError> {
-        match keycode {
-            KeyCode::Return => {
-                // Toggle between stages for testing
-                if self.stage == Stage::PreAuth {
-                    self.stage = Stage::InGame;
-                } else if self.stage == Stage::InGame {
-                    self.stage = Stage::PreAuth;
-                }
-            },
-            KeyCode::Escape => {
-                // Quit the game
-                ctx.request_quit();
-            },
-            _ => {}
-        }
         Ok(())
     }
 }
