@@ -48,7 +48,7 @@ impl GameState {
                 Image::from_path(ctx, "sprites/tiles/wall.png").expect("Failed to load sprite")
             }
         };
-        
+
         let pos = Position::new(100.0, 100.0); // Start at a more visible position
 
         Self {
@@ -80,19 +80,24 @@ impl GameState {
 
                 let zoomed_width = screen_width / CAMERA_ZOOM;
                 let zoomed_height = screen_height / CAMERA_ZOOM;
-                
+
                 canvas.set_screen_coordinates(Rect::new(0.0, 0.0, zoomed_width, zoomed_height));
 
                 // Draw the player sprite at the correct position
                 // No need for src_rect unless you're using a sprite sheet
                 let draw_params = DrawParam::default()
-                    .dest([self.pos.x, self.pos.y]) // Use dest instead of offset for positioning
-                    .scale([1.0, 1.0]); // Use a reasonable scale (or remove if 1.0)
+                    // Use dest instead of offset for positioning
+                    .dest([self.pos.x, self.pos.y])
+                    // Use a reasonable scale (or remove if 1.0)
+                    .scale([1.0, 1.0]);
 
                 canvas.draw(&self.sp, draw_params);
-                
+
                 // Debug info
-                println!("Drawing player at position: ({}, {})", self.pos.x, self.pos.y);
+                println!(
+                    "Drawing player at position: ({}, {})",
+                    self.pos.x, self.pos.y
+                );
             }
             Stage::InMenu => {}
             Stage::InGame => {}
