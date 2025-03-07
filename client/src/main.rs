@@ -30,25 +30,40 @@ pub enum Stage {
     InGame,
 }
 
+// Direction enum for player animation
+#[derive(PartialEq, Clone, Copy)]
+enum Direction {
+    Down,
+    Left,
+    Right,
+    Up,
+}
+
 pub struct GameState {
     stage: Stage,
     nc: NetClient,
 
     sp: Image,
     pos: Position,
+    
+    // Animation state
+    current_frame: usize,
+    frame_timer: f32,
+    direction: Direction,
+    is_moving: bool,
 }
 
 impl GameState {
     pub fn new(ctx: &mut ggez::Context) -> Self {
         let mut nc = NetClient::new();
 
-        // Load the sprite with proper error handling
-        let player_sprite = match Image::from_path(ctx, "/sprites/tiles/wall.png") {
+        // Load the player sprite with proper error handling
+        let player_sprite = match Image::from_path(ctx, "/sprites/player/professor_walk_cycle_no_hat.png") {
             Ok(img) => img,
             Err(e) => {
                 println!("Failed to load sprite: {}", e);
                 // Try an alternative path as fallback
-                Image::from_path(ctx, "sprites/tiles/wall.png").expect("Failed to load sprite")
+                Image::from_path(ctx, "sprites/player/professor_walk_cycle_no_hat.png").expect("Failed to load player sprite")
             }
         };
 
@@ -64,6 +79,10 @@ impl GameState {
             nc,
             pos,
             sp: player_sprite,
+            current_frame: 0,
+            frame_timer: 0.0,
+            direction: Direction::Down,
+            is_moving: false,
         }
     }
 
@@ -132,10 +151,37 @@ impl GameState {
 
                 canvas.set_screen_coordinates(Rect::new(0.0, 0.0, zoomed_width, zoomed_height));
 
+                // Calculate the source rectangle for the current animation frame
+                // Corrected direction mapping based on user's description:
+                // Left is correct
+                // Right is actually Down
+                // Down is actually Up
+                // Up is actually Right
+                let direction_offset = match self.direction {
+                    Direction::Left => 1,   
+                    Direction::Right => 2,  
+                    Direction::Down => 3,   
+                    Direction::Up => 0,     
+                };
+                
+                // Each row in the sprite sheet represents a direction
+                // Each column represents an animation frame
+                let frame_to_use = if self.is_moving { self.current_frame } else { 0 };
+                let src_x = (frame_to_use as f32) * SPRITE_SHEET_WIDTH;
+                let src_y = (direction_offset as f32) * SPRITE_SHEET_HEIGHT;
+                
+                let src_rect = Rect::new(
+                    src_x / self.sp.width() as f32,
+                    src_y / self.sp.height() as f32,
+                    SPRITE_SHEET_WIDTH / self.sp.width() as f32,
+                    SPRITE_SHEET_HEIGHT / self.sp.height() as f32
+                );
+
                 // Draw the player sprite at the correct position
                 let draw_params = DrawParam::default()
                     .dest([self.pos.x, self.pos.y])
-                    .scale([1.0, 1.0]);
+                    .scale([1.0, 1.0])
+                    .src(src_rect);
 
                 canvas.draw(&self.sp, draw_params);
 
@@ -183,15 +229,31 @@ impl event::EventHandler<ggez::GameError> for GameState {
 
             if keyboard::is_key_pressed(ctx, KeyCode::Up) || keyboard::is_key_pressed(ctx, KeyCode::W) {
                 dy -= MOVEMENT_SPEED;
+                self.direction = Direction::Up;
             }
             if keyboard::is_key_pressed(ctx, KeyCode::Down) || keyboard::is_key_pressed(ctx, KeyCode::S) {
                 dy += MOVEMENT_SPEED;
+                self.direction = Direction::Down;
             }
             if keyboard::is_key_pressed(ctx, KeyCode::Left) || keyboard::is_key_pressed(ctx, KeyCode::A) {
                 dx -= MOVEMENT_SPEED;
+                self.direction = Direction::Left;
             }
             if keyboard::is_key_pressed(ctx, KeyCode::Right) || keyboard::is_key_pressed(ctx, KeyCode::D) {
                 dx += MOVEMENT_SPEED;
+                self.direction = Direction::Right;
+            }
+
+            // Update animation state
+            self.is_moving = dx != 0.0 || dy != 0.0;
+            
+            if self.is_moving {
+                // Update animation frame
+                self.frame_timer += ctx.time.delta().as_secs_f32();
+                if self.frame_timer >= ANIMATION_FRAME_TIME {
+                    self.frame_timer = 0.0;
+                    self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
+                }
             }
 
             // If there's movement, update position and send to server
