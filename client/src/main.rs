@@ -59,69 +59,45 @@ impl GameState {
         if let Err(e) = asset_manager.load_asset(
             ctx, 
             "player", 
-            "/player/professor_walk_cycle_no_hat.png"
+            "/sprites/player/professor_walk_cycle_no_hat.png"
         ) {
             println!("Failed to load sprite: {}", e);
             // Try an alternative path as fallback
-            if let Err(e) = asset_manager.load_asset(
+            asset_manager.load_asset(
                 ctx,
                 "player",
-                "player/professor_walk_cycle_no_hat.png"
-            ) {
-                println!("Failed to load player sprite with alternative path: {}", e);
-                // Try with absolute path as last resort
-                asset_manager.load_asset(
-                    ctx,
-                    "player",
-                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/player/professor_walk_cycle_no_hat.png"
-                ).expect("Failed to load player sprite");
-            }
+                "sprites/player/professor_walk_cycle_no_hat.png"
+            ).expect("Failed to load player sprite");
         }
         
         // Load wall sprite
         if let Err(e) = asset_manager.load_asset(
             ctx,
             "wall",
-            "/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
+            "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
         ) {
             println!("Failed to load wall sprite: {}", e);
             // Try an alternative path as fallback
-            if let Err(e) = asset_manager.load_asset(
+            asset_manager.load_asset(
                 ctx,
                 "wall",
-                "Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
-            ) {
-                println!("Failed to load wall sprite with alternative path: {}", e);
-                // Try with absolute path as last resort
-                asset_manager.load_asset(
-                    ctx,
-                    "wall",
-                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
-                ).expect("Failed to load wall sprite");
-            }
+                "sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
+            ).expect("Failed to load wall sprite");
         }
         
         // Load floor sprite
         if let Err(e) = asset_manager.load_asset(
             ctx,
             "floor",
-            "/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
+            "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
         ) {
             println!("Failed to load floor sprite: {}", e);
             // Try an alternative path as fallback
-            if let Err(e) = asset_manager.load_asset(
+            asset_manager.load_asset(
                 ctx,
                 "floor",
-                "Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
-            ) {
-                println!("Failed to load floor sprite with alternative path: {}", e);
-                // Try with absolute path as last resort
-                asset_manager.load_asset(
-                    ctx,
-                    "floor",
-                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
-                ).expect("Failed to load floor sprite");
-            }
+                "sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
+            ).expect("Failed to load floor sprite");
         }
 
         // Send registration/login command
