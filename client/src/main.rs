@@ -4,16 +4,13 @@ use std::time::Duration;
 use ggez::{
     Context, GameResult, event,
     graphics::{self, Color, DrawParam, Image, Rect},
-    input::keyboard::{self, KeyCode},
     mint::Point2,
 };
 use net::NetClient;
 use protocol::Position;
 
-const PLAYER_SIZE: f32 = 32.0;
-const MOVEMENT_SPEED: f32 = 2.0;
+// Constants that remain in main.rs
 const GRID_SIZE: f32 = 64.0;
-const WORLD_SIZE: f32 = 800.0; // Smaller play area
 const SPRITE_SHEET_WIDTH: f32 = 64.0; // Width of each sprite in the sheet
 const SPRITE_SHEET_HEIGHT: f32 = 64.0; // Height of each sprite in the sheet
 const ANIMATION_FRAME_TIME: f32 = 0.05; // Halved from 0.1 to make animation twice as fast
@@ -23,21 +20,13 @@ const DIALOGUE_HEIGHT: f32 = 150.0;
 
 mod net;
 mod assets;
+mod input;
 
 #[derive(PartialEq)]
 pub enum Stage {
     PreAuth,
     InMenu,
     InGame,
-}
-
-// Direction enum for player animation
-#[derive(PartialEq, Clone, Copy)]
-enum Direction {
-    Down,
-    Left,
-    Right,
-    Up,
 }
 
 pub struct GameState {
@@ -50,7 +39,7 @@ pub struct GameState {
     // Animation state
     current_frame: usize,
     frame_timer: f32,
-    direction: Direction,
+    direction: input::Direction,
     is_moving: bool,
 }
 
@@ -87,7 +76,7 @@ impl GameState {
             sp: player_sprite,
             current_frame: 0,
             frame_timer: 0.0,
-            direction: Direction::Down,
+            direction: input::Direction::Down,
             is_moving: false,
         }
     }
@@ -129,6 +118,29 @@ impl GameState {
                         }
                     },
                 }
+                
+                // Handle movement using the input module
+                let movement = input::handle_input(ctx);
+                
+                // Update movement state
+                self.is_moving = movement.is_moving;
+                self.direction = movement.direction;
+                
+                // Update animation if moving
+                if self.is_moving {
+                    // Update animation frame
+                    self.frame_timer += ctx.time.delta().as_secs_f32();
+                    if self.frame_timer >= ANIMATION_FRAME_TIME {
+                        self.frame_timer = 0.0;
+                        self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
+                    }
+                }
+                
+                // Update position
+                input::update_position(&mut self.pos, &movement);
+                
+                // Send movement to server
+                input::send_movement_to_server(&mut self.nc, &movement);
             }
         }
     }
@@ -153,67 +165,6 @@ impl GameState {
             }
             Stage::InMenu => {}
             Stage::InGame => {
-                // Handle keyboard input for movement
-                let mut dx = 0.0;
-                let mut dy = 0.0;
-
-                if keyboard::is_key_pressed(ctx, KeyCode::Up)
-                    || keyboard::is_key_pressed(ctx, KeyCode::W)
-                {
-                    dy -= MOVEMENT_SPEED;
-                    self.direction = Direction::Up;
-                }
-                if keyboard::is_key_pressed(ctx, KeyCode::Down)
-                    || keyboard::is_key_pressed(ctx, KeyCode::S)
-                {
-                    dy += MOVEMENT_SPEED;
-                    self.direction = Direction::Down;
-                }
-                if keyboard::is_key_pressed(ctx, KeyCode::Left)
-                    || keyboard::is_key_pressed(ctx, KeyCode::A)
-                {
-                    dx -= MOVEMENT_SPEED;
-                    self.direction = Direction::Left;
-                }
-                if keyboard::is_key_pressed(ctx, KeyCode::Right)
-                    || keyboard::is_key_pressed(ctx, KeyCode::D)
-                {
-                    dx += MOVEMENT_SPEED;
-                    self.direction = Direction::Right;
-                }
-
-                // Update animation state
-                self.is_moving = dx != 0.0 || dy != 0.0;
-
-                if self.is_moving {
-                    // Update animation frame
-                    self.frame_timer += ctx.time.delta().as_secs_f32();
-                    if self.frame_timer >= ANIMATION_FRAME_TIME {
-                        self.frame_timer = 0.0;
-                        self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
-                    }
-                }
-
-                // If there's movement, update position and send to server
-                if dx != 0.0 || dy != 0.0 {
-                    // Update local position
-                    self.pos.x += dx;
-                    self.pos.y += dy;
-
-                    // Ensure player stays within world bounds
-                    self.pos.x = self.pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-                    self.pos.y = self.pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-
-                    // Send movement command to server
-                    // Convert to integer deltas for the server
-                    let dx_int = dx as i32;
-                    let dy_int = dy as i32;
-                    if dx_int != 0 || dy_int != 0 {
-                        let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
-                        self.nc.send(move_cmd);
-                    }
-                }
-
                 let screen_width = ctx.gfx.window().inner_size().width as f32;
                 let screen_height = ctx.gfx.window().inner_size().height as f32;
 
@@ -229,10 +180,10 @@ impl GameState {
                 // Down is actually Up
                 // Up is actually Right
                 let direction_offset = match self.direction {
-                    Direction::Up => 0,
-                    Direction::Left => 1,
-                    Direction::Down => 2,
-                    Direction::Right => 3,
+                    input::Direction::Up => 0,
+                    input::Direction::Left => 1,
+                    input::Direction::Down => 2,
+                    input::Direction::Right => 3,
                 };
 
                 // Each row in the sprite sheet represents a direction
