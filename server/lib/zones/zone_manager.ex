@@ -16,6 +16,12 @@ defmodule ZoneManager do
 
   def loop_manager(zones) do
     receive do
+      {:player_join, username, pid} ->
+        hub_pid = Map.get(zones, "hub")
+        send(hub_pid, {:player_join, username, pid})
+        loop_manager(zones)
+
+
       {:move_zone, zone, player_pid} ->
         Logger.info("Player-(#{player_pid}) requested Zone-(#{zone}) movement")
         loop_manager(zones)

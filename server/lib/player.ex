@@ -7,11 +7,15 @@ defmodule Player do
 
     info = %{:x => 0.0, :y => 0.0}
 
+    send(:zone_manager, {:player_join, username, self()})
 
-    loop_player(stats, info)
+
+
+
+    loop_player(client_pid, stats, info)
   end
 
-  def loop_player(stats, info) do
+  def loop_player(client_pid, stats, info) do
     receive do
       {:heal, value, pid} ->
         Logger.info("Player healed.")
@@ -20,11 +24,11 @@ defmodule Player do
         stats = Map.put(stats, :hp, hp + value)
 
         send(pid, {:client_send, "Healed for #{inspect(value)}."})
-        loop_player(stats, info)
+        loop_player(client_pid, stats, info)
 
       {:stats, pid} ->
         send(pid, {:stats, stats, info})
-        loop_player(stats, info)
+        loop_player(client_pid, stats, info)
 
       {:move, x, y, pid} ->
         send(pid, {:moved, x, y})
@@ -37,11 +41,17 @@ defmodule Player do
         {:ok, y} = Map.fetch(info, :y)
         info = Map.put(info, :y, y + y_delta)
 
-        loop_player(stats, info)
+        loop_player(client_pid, stats, info)
 
+
+
+      {:client_send, line} ->
+        send(client_pid, {:client_send, line})
+      err ->
+        Logger.info "#{inspect(err)}"
     after
       0 ->
-        loop_player(stats, info)
+        loop_player(client_pid, stats, info)
     end
   end
 end

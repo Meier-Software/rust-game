@@ -14,8 +14,31 @@ defmodule Zone do
   end
 
   def loop_zone(zone_data) do
+    receive do
+      {:player_join, name, pid} ->
+        Logger.info "NEW PLAYER #{inspect(name)} JOINED ZONE."
+        player_list = Map.get(zone_data, :playerlist)
+        player_list = Map.put(player_list, name, pid)
+        zone_data = Map.put(zone_data, :playerlist, player_list)
+
+        send(self(), {:broadcast, "player #{name} joined HUB"})
+        send(pid, {:client_send, "ZONE MANAGER"})
+        loop_zone(zone_data)
+
+      {:broadcast, line} ->
+        Logger.info "Attempt broadcast."
+        player_list = Map.get(zone_data, :playerlist)
+
+        for {k, pid} <- player_list do
+          Logger.info "player name #{k}, player pid #{inspect(pid)}"
+          send(pid, {:client_send, line})
+        end
+
+        loop_zone(zone_data)
 
 
-    loop_zone(zone_data)
+      after 0 ->
+        loop_zone(zone_data)
+    end
   end
 end

@@ -20,17 +20,18 @@ defmodule Server do
     {:ok, zone_manager_pid} =
       Task.Supervisor.start_child(Server.Services, fn -> ZoneManager.start() end)
 
-    Logger.info("Running the acceptor service at #{inspect(zone_manager_pid)}")
+    Logger.info("Running the Zone Manager service at #{inspect(zone_manager_pid)}")
 
     {:ok, db_pid} =
       Task.Supervisor.start_child(Server.Services, fn -> Database.start() end)
 
-    Logger.info("Running the acceptor service at #{inspect(db_pid)}")
+    Logger.info("Running the Database service at #{inspect(db_pid)}")
 
     loop_coordinator()
   end
 
   def loop_coordinator() do
+    # TODO: watchdog the services.
     loop_coordinator()
   end
 

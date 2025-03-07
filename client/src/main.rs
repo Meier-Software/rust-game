@@ -22,6 +22,7 @@ const DIALOGUE_PADDING: f32 = 20.0;
 const DIALOGUE_HEIGHT: f32 = 150.0;
 
 mod net;
+mod assets;
 
 #[derive(PartialEq)]
 pub enum Stage {
@@ -69,8 +70,11 @@ impl GameState {
                 }
             };
 
+
+
+
         // Send registration/login command
-        nc.send("register abc 123\r\n".to_string());
+        nc.send("register xyz 123\r\n".to_string());
         // Wait a bit for server response
         std::thread::sleep(Duration::from_millis(100));
 

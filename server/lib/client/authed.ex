@@ -34,7 +34,7 @@ defmodule Client.Authed do
         end
 
       ["heal", value] ->
-        Logger.info("Alerting player to heal.")
+        # Logger.info("Alerting player to heal.")
         send(player_pid, {:heal, value, self()})
         "Attempting to heal for #{value}."
 
@@ -45,7 +45,7 @@ defmodule Client.Authed do
 
       ["move", x, y] ->
         send(player_pid, {:move, x, y, self()})
-        Logger.info("Moving player.")
+        # Logger.info("Moving player.")
         "Moved x#{inspect(x)} y#{inspect(y)}"
 
 
@@ -70,7 +70,7 @@ defmodule Client.Authed do
   end
 
   def loop_client(client_socket, auth, player_pid) do
-    Logger.info("Loop Client")
+    # Logger.info("Loop Client")
 
     receive do
       {:client_send, line} ->
@@ -79,7 +79,7 @@ defmodule Client.Authed do
         loop_client(client_socket, auth, player_pid)
 
       {:stats, stats} ->
-        Logger.info("stats #{inspect(stats)}")
+        # Logger.info("stats #{inspect(stats)}")
         line = "stats collected."
         write_line(line, client_socket)
 
