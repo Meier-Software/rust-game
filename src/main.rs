@@ -1,6 +1,6 @@
 use ggez::{
     event,
-    graphics::{self, Color, DrawMode, DrawParam, Image, Mesh, Rect},
+    graphics::{self, Color, DrawMode, DrawParam, Image, Mesh, Rect, Text},
     input::keyboard::KeyCode,
     Context, GameResult,
 };
@@ -8,12 +8,15 @@ use glam::Vec2;
 use std::path::PathBuf;
 
 const PLAYER_SIZE: f32 = 32.0;
-const MOVEMENT_SPEED: f32 = 5.0;
+const MOVEMENT_SPEED: f32 = 2.0;
 const GRID_SIZE: f32 = 64.0;
 const WORLD_SIZE: f32 = 800.0; // Smaller play area
 const SPRITE_SHEET_WIDTH: f32 = 64.0;  // Width of each sprite in the sheet
 const SPRITE_SHEET_HEIGHT: f32 = 64.0; // Height of each sprite in the sheet
-const ANIMATION_FRAME_TIME: f32 = 0.1; // Time between animation frames in seconds
+const ANIMATION_FRAME_TIME: f32 = 0.05; // Halved from 0.1 to make animation twice as fast
+const CAMERA_ZOOM: f32 = 2.0; // Camera zoom factor (higher = more zoomed in)
+const DIALOGUE_PADDING: f32 = 20.0;
+const DIALOGUE_HEIGHT: f32 = 150.0;
 
 #[derive(Clone, Copy, PartialEq)]
 enum CellType {
@@ -42,6 +45,8 @@ struct GameState {
     wall_sprite: Image,
     animation_frame: usize,
     animation_timer: f32,
+    show_dialogue: bool,
+    dialogue_text: String,
 }
 
 impl GameState {
@@ -74,6 +79,8 @@ impl GameState {
             wall_sprite,
             animation_frame: 0,
             animation_timer: 0.0,
+            show_dialogue: false,
+            dialogue_text: String::from("It's dark, I should get out of here."),
         }
     }
 
@@ -157,62 +164,108 @@ impl GameState {
         canvas.draw(&self.player_sprite, draw_params);
         Ok(())
     }
+
+    fn draw_dialogue(&self, ctx: &mut Context, canvas: &mut graphics::Canvas) -> GameResult {
+        if !self.show_dialogue {
+            return Ok(());
+        }
+
+        let screen_width = ctx.gfx.window().inner_size().width as f32;
+        let screen_height = ctx.gfx.window().inner_size().height as f32;
+
+        // Create dialogue box background
+        let dialogue_rect = Rect::new(
+            DIALOGUE_PADDING,
+            screen_height - DIALOGUE_HEIGHT - DIALOGUE_PADDING,
+            screen_width - (DIALOGUE_PADDING * 2.0),
+            DIALOGUE_HEIGHT,
+        );
+
+        let dialogue_mesh = Mesh::new_rectangle(
+            ctx,
+            DrawMode::fill(),
+            dialogue_rect,
+            Color::from_rgba(0, 0, 0, 200),
+        )?;
+
+        // Create text
+        let mut text = Text::new(self.dialogue_text.as_str());
+        text.set_scale(24.0);
+        text.set_bounds([dialogue_rect.w - DIALOGUE_PADDING * 2.0, dialogue_rect.h]);
+
+        // Draw dialogue box and text
+        canvas.draw(&dialogue_mesh, DrawParam::default());
+        canvas.draw(&text, DrawParam::default().dest([
+            dialogue_rect.x + DIALOGUE_PADDING,
+            dialogue_rect.y + DIALOGUE_PADDING,
+        ]));
+
+        Ok(())
+    }
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        let delta_time = ctx.time.delta().as_secs_f32();
-        let mut new_pos = self.player_pos;
-        let mut new_direction = self.player_direction;
-        let mut is_moving = false;
-        let mut movement = Vec2::ZERO;
-        
-        if ctx.keyboard.is_key_pressed(KeyCode::Left) {
-            movement.x -= MOVEMENT_SPEED;
-            new_direction = Direction::Left;
-            is_moving = true;
-        }
-        if ctx.keyboard.is_key_pressed(KeyCode::Right) {
-            movement.x += MOVEMENT_SPEED;
-            new_direction = Direction::Right;
-            is_moving = true;
-        }
-        if ctx.keyboard.is_key_pressed(KeyCode::Up) {
-            movement.y -= MOVEMENT_SPEED;
-            new_direction = Direction::Up;
-            is_moving = true;
-        }
-        if ctx.keyboard.is_key_pressed(KeyCode::Down) {
-            movement.y += MOVEMENT_SPEED;
-            new_direction = Direction::Down;
-            is_moving = true;
+        // Handle Enter key for dialogue
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
+            self.show_dialogue = !self.show_dialogue;
         }
 
-        // Normalize diagonal movement
-        if movement.x != 0.0 && movement.y != 0.0 {
-            movement = movement.normalize() * MOVEMENT_SPEED;
-        }
-
-        // Apply movement
-        new_pos.x = (self.player_pos.x + movement.x).max(0.0).min(WORLD_SIZE);
-        new_pos.y = (self.player_pos.y + movement.y).max(0.0).min(WORLD_SIZE);
-
-        // Update animation
-        if is_moving {
-            self.animation_timer += delta_time;
-            if self.animation_timer >= ANIMATION_FRAME_TIME {
-                self.animation_timer = 0.0;
-                let frames_per_row = (self.player_sprite.width() as f32 / SPRITE_SHEET_WIDTH) as usize;
-                self.animation_frame = (self.animation_frame + 1) % frames_per_row;
+        // Only process movement if dialogue is not showing
+        if !self.show_dialogue {
+            let delta_time = ctx.time.delta().as_secs_f32();
+            let mut new_pos = self.player_pos;
+            let mut new_direction = self.player_direction;
+            let mut is_moving = false;
+            let mut movement = Vec2::ZERO;
+            
+            if ctx.keyboard.is_key_pressed(KeyCode::Left) {
+                movement.x -= MOVEMENT_SPEED;
+                new_direction = Direction::Left;
+                is_moving = true;
             }
-        } else {
-            self.animation_frame = 0; // Reset to first frame when not moving
-        }
+            if ctx.keyboard.is_key_pressed(KeyCode::Right) {
+                movement.x += MOVEMENT_SPEED;
+                new_direction = Direction::Right;
+                is_moving = true;
+            }
+            if ctx.keyboard.is_key_pressed(KeyCode::Up) {
+                movement.y -= MOVEMENT_SPEED;
+                new_direction = Direction::Up;
+                is_moving = true;
+            }
+            if ctx.keyboard.is_key_pressed(KeyCode::Down) {
+                movement.y += MOVEMENT_SPEED;
+                new_direction = Direction::Down;
+                is_moving = true;
+            }
 
-        // Only update position if there's no collision
-        if !self.check_collision(new_pos) {
-            self.player_pos = new_pos;
-            self.player_direction = new_direction;
+            // Normalize diagonal movement
+            if movement.x != 0.0 && movement.y != 0.0 {
+                movement = movement.normalize() * MOVEMENT_SPEED;
+            }
+
+            // Apply movement
+            new_pos.x = (self.player_pos.x + movement.x).max(0.0).min(WORLD_SIZE);
+            new_pos.y = (self.player_pos.y + movement.y).max(0.0).min(WORLD_SIZE);
+
+            // Update animation
+            if is_moving {
+                self.animation_timer += delta_time;
+                if self.animation_timer >= ANIMATION_FRAME_TIME {
+                    self.animation_timer = 0.0;
+                    let frames_per_row = (self.player_sprite.width() as f32 / SPRITE_SHEET_WIDTH) as usize;
+                    self.animation_frame = (self.animation_frame + 1) % frames_per_row;
+                }
+            } else {
+                self.animation_frame = 0; // Reset to first frame when not moving
+            }
+
+            // Only update position if there's no collision
+            if !self.check_collision(new_pos) {
+                self.player_pos = new_pos;
+                self.player_direction = new_direction;
+            }
         }
 
         Ok(())
@@ -221,20 +274,22 @@ impl event::EventHandler<ggez::GameError> for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
         
-        // Calculate camera position to center on player
+        // Calculate camera position to center on player with zoom
         let screen_width = ctx.gfx.window().inner_size().width as f32;
         let screen_height = ctx.gfx.window().inner_size().height as f32;
+        let zoomed_width = screen_width / CAMERA_ZOOM;
+        let zoomed_height = screen_height / CAMERA_ZOOM;
         let camera_pos = Vec2::new(
-            self.player_pos.x - screen_width / 2.0,
-            self.player_pos.y - screen_height / 2.0,
+            self.player_pos.x - zoomed_width / 2.0,
+            self.player_pos.y - zoomed_height / 2.0,
         );
 
-        // Apply camera transform first
+        // Apply camera transform with zoom
         canvas.set_screen_coordinates(Rect::new(
             camera_pos.x,
             camera_pos.y,
-            screen_width,
-            screen_height,
+            zoomed_width,
+            zoomed_height,
         ));
 
         // Draw cells
@@ -246,8 +301,19 @@ impl event::EventHandler<ggez::GameError> for GameState {
         
         // Draw the player sprite with animation
         self.draw_player(&mut canvas)?;
-        canvas.finish(ctx)?;
+
+        // Reset to screen coordinates for UI elements
+        canvas.set_screen_coordinates(Rect::new(
+            0.0,
+            0.0,
+            screen_width,
+            screen_height,
+        ));
+
+        // Draw dialogue box on top of everything else
+        self.draw_dialogue(ctx, &mut canvas)?;
         
+        canvas.finish(ctx)?;
         Ok(())
     }
 }
