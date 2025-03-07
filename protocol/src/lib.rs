@@ -1,7 +1,5 @@
 use specs::{Component, VecStorage, World, WorldExt};
 
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -13,8 +11,8 @@ impl Position {
 }
 
 pub fn world_register(world: &mut World) {
-    world.register::<Position>();
-    world.register::<Facing>();
+    // world.register::<Position>();
+    // world.register::<Facing>();
 }
 
 #[derive(Component, Debug)]
