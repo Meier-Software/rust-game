@@ -11,7 +11,7 @@ defmodule Acceptor do
     Logger.info("Client Acceptor alias registered.")
 
     {:ok, socket} =
-      :gen_tcp.listen(4040, [:binary, packet: :line, active: false, reuseaddr: true])
+      :gen_tcp.listen(45250, [:binary, packet: :line, active: false, reuseaddr: true])
 
     loop_acceptor(socket)
   end
