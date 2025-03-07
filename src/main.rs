@@ -12,6 +12,38 @@ const MOVEMENT_SPEED: f32 = 2.0;
 const GRID_SIZE: f32 = 64.0;
 const WORLD_SIZE: f32 = 800.0; // Smaller play area
 const SPRITE_SHEET_WIDTH: f32 = 64.0;  // Width of each sprite in the sheet
+
+// Define multiple map layouts (0 = empty, 1 = wall, 3 = door)
+const MAP_1: &[&[i32]] = &[
+    &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1],
+    &[1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+    &[1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+    &[1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+];
+
+const MAP_2: &[&[i32]] = &[
+    &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    &[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    &[3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    &[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    &[1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1],
+    &[1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1],
+    &[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+];
+
 const SPRITE_SHEET_HEIGHT: f32 = 64.0; // Height of each sprite in the sheet
 const ANIMATION_FRAME_TIME: f32 = 0.05; // Halved from 0.1 to make animation twice as fast
 const CAMERA_ZOOM: f32 = 2.0; // Camera zoom factor (higher = more zoomed in)
@@ -22,6 +54,8 @@ const DIALOGUE_HEIGHT: f32 = 150.0;
 enum CellType {
     Empty,
     Wall,
+    Door,
+    Coin,
 }
 
 #[derive(Clone)]
@@ -47,26 +81,15 @@ struct GameState {
     animation_timer: f32,
     show_dialogue: bool,
     dialogue_text: String,
+    current_map: usize, // Track which map we're currently on
+    door_cooldown: f32, // Cooldown timer for door transitions
+    score: u32,  // Add score tracking
 }
 
 impl GameState {
     fn new(ctx: &mut Context) -> Self {
-        // Create a grid of empty cells
-        let grid_size = (WORLD_SIZE / GRID_SIZE) as usize;
-        let mut grid = vec![vec![Cell { cell_type: CellType::Empty }; grid_size]; grid_size];
+        let grid = Self::create_grid_from_map(MAP_1);
         
-        // Create a box around the edges
-        for x in 0..grid_size {
-            for y in 0..grid_size {
-                // Create walls on the edges
-                if x == 0 || x == grid_size - 1 || y == 0 || y == grid_size - 1 {
-                    grid[x][y] = Cell {
-                        cell_type: CellType::Wall,
-                    };
-                }
-            }
-        }
-
         // Load sprites
         let player_sprite = Self::load_player_sprite(ctx);
         let wall_sprite = Image::from_path(ctx, "/sprites/tiles/wall.png").expect("Failed to load wall sprite");
@@ -81,12 +104,62 @@ impl GameState {
             animation_timer: 0.0,
             show_dialogue: false,
             dialogue_text: String::from("It's dark, I should get out of here."),
+            current_map: 1,
+            door_cooldown: 0.0,
+            score: 0,  // Initialize score
         }
     }
 
-    fn load_player_sprite(ctx: &mut Context) -> Image {
-        // Load the professor sprite for the player
-        Image::from_path(ctx, "/sprites/player/professor_walk_cycle_no_hat.png").expect("Failed to load player sprite")
+    fn create_grid_from_map(map: &[&[i32]]) -> Vec<Vec<Cell>> {
+        let grid_size = map.len();
+        let mut grid = vec![vec![Cell { cell_type: CellType::Empty }; grid_size]; grid_size];
+        
+        for (y, row) in map.iter().enumerate() {
+            for (x, &tile) in row.iter().enumerate() {
+                grid[x][y] = Cell {
+                    cell_type: match tile {
+                        1 => CellType::Wall,
+                        3 => CellType::Door,
+                        _ => CellType::Empty,
+                    }
+                };
+            }
+        }
+        grid
+    }
+
+    fn switch_map(&mut self) {
+        // Get the current door position
+        let grid_x = (self.player_pos.x / GRID_SIZE) as usize;
+        
+        // Determine if we're entering from left or right side
+        let entering_from_left = grid_x <= 1;
+        
+        if self.current_map == 1 {
+            self.grid = Self::create_grid_from_map(MAP_2);
+            self.current_map = 2;
+            
+            if entering_from_left {
+                // Place player just to the right of the right door
+                self.player_pos = Vec2::new(10.0 * GRID_SIZE, 5.0 * GRID_SIZE + GRID_SIZE/2.0);
+            } else {
+                // Place player just to the left of the left door
+                self.player_pos = Vec2::new(2.0 * GRID_SIZE, 5.0 * GRID_SIZE + GRID_SIZE/2.0);
+            }
+        } else {
+            self.grid = Self::create_grid_from_map(MAP_1);
+            self.current_map = 1;
+            
+            if entering_from_left {
+                // Place player just to the right of the right door
+                self.player_pos = Vec2::new(10.0 * GRID_SIZE, 5.0 * GRID_SIZE + GRID_SIZE/2.0);
+            } else {
+                // Place player just to the left of the left door
+                self.player_pos = Vec2::new(2.0 * GRID_SIZE, 5.0 * GRID_SIZE + GRID_SIZE/2.0);
+            }
+        }
+        // Reset door cooldown
+        self.door_cooldown = 0.5; // Half a second cooldown
     }
 
     fn check_collision(&self, pos: Vec2) -> bool {
@@ -114,18 +187,52 @@ impl GameState {
         false
     }
 
+    fn check_door(&self, pos: Vec2) -> bool {
+        // Get the center position of the player
+        let grid_x = (pos.x / GRID_SIZE) as usize;
+        let grid_y = (pos.y / GRID_SIZE) as usize;
+        
+        // Check if we're within bounds and on a door
+        if grid_x < self.grid.len() && grid_y < self.grid[0].len() {
+            return self.grid[grid_x][grid_y].cell_type == CellType::Door;
+        }
+        false
+    }
+
     fn draw_cell(&self, ctx: &mut Context, x: usize, y: usize, canvas: &mut graphics::Canvas) -> GameResult {
         let cell = &self.grid[x][y];
-        if cell.cell_type == CellType::Empty {
-            return Ok(());
+        match cell.cell_type {
+            CellType::Empty => Ok(()),
+            CellType::Wall => {
+                let draw_params = DrawParam::default()
+                    .dest([x as f32 * GRID_SIZE, y as f32 * GRID_SIZE])
+                    .scale([GRID_SIZE / self.wall_sprite.width() as f32, GRID_SIZE / self.wall_sprite.height() as f32]);
+                canvas.draw(&self.wall_sprite, draw_params);
+                Ok(())
+            },
+            CellType::Door => {
+                // Draw a blue rectangle for the door
+                let door_rect = Rect::new(
+                    x as f32 * GRID_SIZE,
+                    y as f32 * GRID_SIZE,
+                    GRID_SIZE,
+                    GRID_SIZE,
+                );
+                let door_mesh = Mesh::new_rectangle(
+                    ctx,
+                    DrawMode::fill(),
+                    door_rect,
+                    Color::from_rgb(0, 0, 255), // Blue color
+                )?;
+                canvas.draw(&door_mesh, DrawParam::default());
+                Ok(())
+            }
         }
+    }
 
-        let draw_params = DrawParam::default()
-            .dest([x as f32 * GRID_SIZE, y as f32 * GRID_SIZE])
-            .scale([GRID_SIZE / self.wall_sprite.width() as f32, GRID_SIZE / self.wall_sprite.height() as f32]);
-        
-        canvas.draw(&self.wall_sprite, draw_params);
-        Ok(())
+    fn load_player_sprite(ctx: &mut Context) -> Image {
+        // Load the professor sprite for the player
+        Image::from_path(ctx, "/sprites/player/professor_walk_cycle_no_hat.png").expect("Failed to load player sprite")
     }
 
     fn draw_player(&self, canvas: &mut graphics::Canvas) -> GameResult {
@@ -202,10 +309,40 @@ impl GameState {
 
         Ok(())
     }
+
+    // Add function to check for coin collection
+    fn check_coin(&mut self, pos: Vec2) -> bool {
+        let grid_x = (pos.x / GRID_SIZE) as usize;
+        let grid_y = (pos.y / GRID_SIZE) as usize;
+        
+        if grid_x < self.grid.len() && grid_y < self.grid[0].len() {
+            if self.grid[grid_x][grid_y].cell_type == CellType::Coin {
+                // Collect the coin
+                self.grid[grid_x][grid_y].cell_type = CellType::Empty;
+                self.score += 10;  // Add 10 points per coin
+                return true;
+            }
+        }
+        false
+    }
+
+    // Add function to draw score
+    fn draw_score(&self, ctx: &mut Context, canvas: &mut graphics::Canvas) -> GameResult {
+        let screen_width = ctx.gfx.window().inner_size().width as f32;
+        
+        let score_text = Text::new(format!("Score: {}", self.score));
+        canvas.draw(&score_text, DrawParam::default().dest([10.0, 10.0]));
+        Ok(())
+    }
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        // Update door cooldown
+        if self.door_cooldown > 0.0 {
+            self.door_cooldown -= ctx.time.delta().as_secs_f32();
+        }
+
         // Handle Enter key for dialogue
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             self.show_dialogue = !self.show_dialogue;
@@ -249,6 +386,12 @@ impl event::EventHandler<ggez::GameError> for GameState {
             new_pos.x = (self.player_pos.x + movement.x).max(0.0).min(WORLD_SIZE);
             new_pos.y = (self.player_pos.y + movement.y).max(0.0).min(WORLD_SIZE);
 
+            // Check for door before updating position (only if cooldown is expired)
+            if self.door_cooldown <= 0.0 && self.check_door(new_pos) {
+                self.switch_map();
+                return Ok(());
+            }
+
             // Update animation
             if is_moving {
                 self.animation_timer += delta_time;
@@ -260,6 +403,9 @@ impl event::EventHandler<ggez::GameError> for GameState {
             } else {
                 self.animation_frame = 0; // Reset to first frame when not moving
             }
+
+            // Check for coin collection at new position
+            self.check_coin(new_pos);
 
             // Only update position if there's no collision
             if !self.check_collision(new_pos) {
@@ -312,6 +458,9 @@ impl event::EventHandler<ggez::GameError> for GameState {
 
         // Draw dialogue box on top of everything else
         self.draw_dialogue(ctx, &mut canvas)?;
+
+        // Draw score on top of everything
+        self.draw_score(ctx, &mut canvas)?;
         
         canvas.finish(ctx)?;
         Ok(())
