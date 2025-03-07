@@ -319,7 +319,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
 }
 
 fn main() -> GameResult {
-    let resource_dir = PathBuf::from("./resources");
+    let resource_dir = PathBuf::from("./assets");
     let cb = ggez::ContextBuilder::new("simple_game", "ggez")
         .window_setup(ggez::conf::WindowSetup::default().title("Simple 2D Game"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))
