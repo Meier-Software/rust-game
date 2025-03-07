@@ -21,6 +21,7 @@ const DIALOGUE_HEIGHT: f32 = 150.0;
 mod net;
 mod assets;
 mod input;
+mod player;
 
 #[derive(PartialEq)]
 pub enum Stage {
@@ -43,6 +44,10 @@ pub struct GameState {
     direction: input::Direction,
     is_moving: bool,
 }
+
+
+
+
 
 impl GameState {
     pub fn new(ctx: &mut ggez::Context) -> Self {
