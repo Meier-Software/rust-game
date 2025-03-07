@@ -58,15 +58,34 @@ impl Map {
 
     // Check if a position is valid (not a wall)
     pub fn is_valid_position(&self, x: f32, y: f32, grid_size: f32) -> bool {
-        let grid_x = (x / grid_size) as usize;
-        let grid_y = (y / grid_size) as usize;
+        // Calculate the player's hitbox corners (assuming player is centered at x,y)
+        let player_half_size = crate::input::PLAYER_SIZE / 2.0;
         
-        // Check bounds
-        if grid_x >= self.width || grid_y >= self.height {
-            return false;
+        // Check all four corners of the player's hitbox
+        let corners = [
+            (x - player_half_size, y - player_half_size), // Top-left
+            (x + player_half_size, y - player_half_size), // Top-right
+            (x - player_half_size, y + player_half_size), // Bottom-left
+            (x + player_half_size, y + player_half_size), // Bottom-right
+        ];
+        
+        // Check if any corner is in a wall
+        for (corner_x, corner_y) in corners {
+            let grid_x = (corner_x / grid_size) as usize;
+            let grid_y = (corner_y / grid_size) as usize;
+            
+            // Check bounds
+            if grid_x >= self.width || grid_y >= self.height {
+                return false;
+            }
+            
+            // If this corner is in a wall, position is invalid
+            if self.grid[grid_y][grid_x] == 1 {
+                return false;
+            }
         }
         
-        // 0 means empty space (valid), 1 means wall (invalid)
-        self.grid[grid_y][grid_x] == 0
+        // All corners are in valid positions
+        true
     }
 }

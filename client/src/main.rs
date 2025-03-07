@@ -200,9 +200,13 @@ impl GameState {
                 let zoomed_width = screen_width / CAMERA_ZOOM;
                 let zoomed_height = screen_height / CAMERA_ZOOM;
                 
-                // Center the camera on the player
-                let camera_x = self.pos.x - zoomed_width / 2.0;
-                let camera_y = self.pos.y - zoomed_height / 2.0;
+                // Center the camera on the player's center (not top-left corner)
+                // Add half the player size to center on the player sprite
+                let player_center_x = self.pos.x + input::PLAYER_SIZE / 2.0;
+                let player_center_y = self.pos.y + input::PLAYER_SIZE / 2.0;
+                
+                let camera_x = player_center_x - zoomed_width / 2.0;
+                let camera_y = player_center_y - zoomed_height / 2.0;
                 
                 // Set the camera view
                 canvas.set_screen_coordinates(Rect::new(

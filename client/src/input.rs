@@ -73,13 +73,18 @@ pub fn update_position(pos: &mut Position, movement: &MovementState, map: &Map, 
         let new_x = pos.x + movement.dx;
         let new_y = pos.y + movement.dy;
         
+        // Calculate the center of the player sprite for collision detection
+        // The position is the top-left corner of the sprite, so we add half the player size to get the center
+        let center_x = new_x + PLAYER_SIZE / 2.0;
+        let center_y = new_y + PLAYER_SIZE / 2.0;
+        
         // Check horizontal movement
-        if map.is_valid_position(new_x, pos.y, grid_size) {
+        if map.is_valid_position(center_x, pos.y + PLAYER_SIZE / 2.0, grid_size) {
             pos.x = new_x;
         }
         
         // Check vertical movement
-        if map.is_valid_position(pos.x, new_y, grid_size) {
+        if map.is_valid_position(pos.x + PLAYER_SIZE / 2.0, center_y, grid_size) {
             pos.y = new_y;
         }
 
