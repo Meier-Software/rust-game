@@ -437,7 +437,6 @@ dependencies = [
  "glam 0.25.0",
  "image",
  "protocol",
- "specs",
 ]
 
 [[package]]

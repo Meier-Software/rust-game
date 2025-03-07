@@ -8,9 +8,9 @@ ggez = "0.9"
 glam = "0.25"
 image = "0.24"
 
-[dependencies.specs]
-version = "0.20"
-features = ["derive"]
+# [dependencies.specs]
+# version = "0.20"
+# features = ["derive"]
 
 [dependencies.protocol]
 path = "../protocol"

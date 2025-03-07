@@ -1,17 +1,13 @@
-use assets::Asset;
 use net::NetworkingIn;
 use net::{NetClient, NetworkingOut};
 
-use event::{Event, EventType};
 use ggez::Context;
 use protocol::{Facing, Position};
 use render::RenderFrame;
-use specs::{Builder, RunNow, World, WorldExt};
 
-pub mod event;
+
 mod net;
 mod render;
-mod assets;
 
 pub enum State {
     PreAuth,
@@ -23,7 +19,6 @@ pub enum State {
 
 pub struct Engine {
     state: State,
-    world: World,
 }
 
 impl Engine {
@@ -40,10 +35,7 @@ impl Engine {
         let facing = protocol::Facing::South; // Default facing direction
 
         // Create player entity with position and facing components
-        world.create_entity()
-            .with(pos)
-            .with(facing)
-            .build();
+        world.create_entity().with(pos).with(facing).build();
 
         let nc = NetClient::new();
         world.insert(nc);
@@ -52,10 +44,10 @@ impl Engine {
             state: State::PreAuth,
             world,
         };
-        
+
         // Initialize rendering resources
         engine.init_rendering(ctx);
-        
+
         engine
     }
 
@@ -87,13 +79,8 @@ impl Engine {
             }
         }
 
-        let mut render_frame = RenderFrame;
-        render_frame.run_now(&self.world);
 
-
-        // Handle Net Events.
-        let mut net_system = NetworkingOut {};
-        net_system.run_now(&self.world);
+        
 
         // == ECS Maintain ==
         self.world.maintain();
@@ -120,21 +107,22 @@ impl ggez::event::EventHandler<ggez::GameError> for Engine {
         {
             let delta_time = ctx.time.delta().as_secs_f32();
             let mut player_sprite = self.world.write_resource::<render::PlayerSprite>();
-            
+
             // Update animation timer
             player_sprite.animation_timer += delta_time;
             if player_sprite.animation_timer >= render::ANIMATION_FRAME_TIME {
                 player_sprite.animation_timer = 0.0;
-                
+
                 // Get the number of frames in the sprite sheet
                 let sprite_width = player_sprite.sprite.width() as f32;
                 let frames_per_row = (sprite_width / render::SPRITE_SHEET_WIDTH) as usize;
-                
+
                 // Update animation frame
-                player_sprite.animation_frame = (player_sprite.animation_frame + 1) % frames_per_row;
+                player_sprite.animation_frame =
+                    (player_sprite.animation_frame + 1) % frames_per_row;
             }
         }
-        
+
         // TODO: Get input from ctx.
         self.fixed_update();
         Ok(())

@@ -1,11 +1,5 @@
-use crate::engine::event::*;
 use std::{io::Write, net::TcpStream};
 
-use specs::Component;
-use specs::prelude::*;
-
-#[derive(Component)]
-#[storage(VecStorage)]
 pub struct NetClient {
     tcp: TcpStream,
 }
