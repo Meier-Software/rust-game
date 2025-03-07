@@ -1,10 +1,8 @@
 use ggez::{
     Context,
-    input::keyboard::{self, KeyCode},
+    input::keyboard::{KeyCode},
 };
 use crate::net::NetClient;
-use protocol::Position;
-use crate::map::Map;
 
 // Direction enum for player animation
 #[derive(PartialEq, Clone, Copy)]
@@ -15,7 +13,7 @@ pub enum Direction {
     Up,
 }
 
-
+// Game constants
 pub const MOVEMENT_SPEED: f32 = 1.0;
 pub const WORLD_SIZE: f32 = 800.0;
 pub const PLAYER_SIZE: f32 = 16.0;
@@ -64,33 +62,6 @@ pub fn handle_input(ctx: &Context) -> MovementState {
         direction,
         dx,
         dy,
-    }
-}
-
-pub fn update_position(pos: &mut Position, movement: &MovementState, map: &Map, grid_size: f32) {
-    if movement.is_moving {
-        // Calculate new position
-        let new_x = pos.x + movement.dx;
-        let new_y = pos.y + movement.dy;
-        
-        // Calculate the center of the player sprite for collision detection
-        // The position is the top-left corner of the sprite, so we add half the player size to get the center
-        let center_x = new_x + PLAYER_SIZE / 2.0;
-        let center_y = new_y + PLAYER_SIZE / 2.0;
-        
-        // Check horizontal movement
-        if map.is_valid_position(center_x, pos.y + PLAYER_SIZE / 2.0, grid_size) {
-            pos.x = new_x;
-        }
-        
-        // Check vertical movement
-        if map.is_valid_position(pos.x + PLAYER_SIZE / 2.0, center_y, grid_size) {
-            pos.y = new_y;
-        }
-
-        // Ensure player stays within world bounds
-        pos.x = pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-        pos.y = pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
     }
 }
 

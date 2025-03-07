@@ -36,7 +36,7 @@ impl Map {
         }
     }
 
-    pub fn draw(&self, _ctx: &mut Context, canvas: &mut graphics::Canvas, asset_manager: &AssetManager, grid_size: f32) -> GameResult<()> {
+    pub fn draw(&self, ctx: &Context, canvas: &mut graphics::Canvas, asset_manager: &AssetManager, grid_size: f32) -> GameResult<()> {
         // First draw floor tiles for all cells
         if let Some(floor_asset) = asset_manager.get_asset("floor") {
             for y in 0..self.height {
