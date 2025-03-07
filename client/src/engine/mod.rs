@@ -63,11 +63,16 @@ impl Engine {
                 self.fire_event(EventType::NetSend, line);
 
                 // self.state = State::InGame;
+
+                // TODO: Add in a system to handle auth. If authed move to InGame.
             }
             State::InMenu => {
                 todo!();
             }
-            State::InGame => todo!(),
+            State::InGame => {
+                // TODO: While InGame render player.
+                todo!()
+            },
         }
 
 
@@ -79,10 +84,9 @@ impl Engine {
         self.world.maintain();
     }
 
-    // Updated once per frame. FPSRate
-    pub fn fps_update(&mut self) {}
 
     pub fn close(&mut self) {
+        
         
     }
 }
@@ -97,5 +101,18 @@ impl Engine {
             .with(event_type.clone())
             .with(event)
             .build();
+    }
+}
+
+impl ggez::event::EventHandler<ggez::GameError> for Engine {
+    fn update(&mut self, _ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+        // TODO: Get input from ctx.
+        self.fixed_update();
+        Ok(())
+    }
+
+    fn draw(&mut self, _ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+        self.fps_update();
+        Ok(())
     }
 }
