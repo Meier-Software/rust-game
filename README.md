@@ -1,15 +1,6 @@
 # Simple 2D Game
 
-A simple 2D game built with Rust using the GGEZ game engine. The game features a professor character navigating through a walled environment with smooth animations and dialogue system.
-
-## Features
-
-- Smooth character movement with arrow key controls
-- Animated sprite-based character with walking animations in four directions
-- Collision detection with walls
-- Camera system that follows the player with zoom
-- Interactive dialogue system (toggle with Enter key)
-- Clean, pixel-art style graphics
+A simple 2D game built with Rust using the GGEZ game engine.
 
 ## Prerequisites
 
