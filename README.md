@@ -27,17 +27,7 @@ git clone https://github.com/hcm444/rust-game
 cd rust-game-main
 ```
 
-3. Ensure the resources directory is properly set up:
-```
-./resources/
-└── sprites/
-    ├── player/
-    │   └── professor_walk_cycle_no_hat.png
-    └── tiles/
-        └── wall.png
-```
-
-4. Build and run:
+3. Build and run:
 ```bash
 cargo run
 ```
