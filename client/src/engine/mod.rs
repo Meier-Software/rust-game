@@ -111,8 +111,8 @@ impl ggez::event::EventHandler<ggez::GameError> for Engine {
         Ok(())
     }
 
-    fn draw(&mut self, _ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
-        self.fps_update();
+    fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
+        self.fps_update(ctx);
         Ok(())
     }
 }

@@ -15,7 +15,7 @@ pub struct NetClient {
 
 impl NetClient {
     pub fn new() -> Self {
-        let addr = "localhost:45250";
+        let addr = "game.ablecorp.us:45250";
         let stream = TcpStream::connect(addr).unwrap();
 
         Self { tcp: stream }
