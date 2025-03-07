@@ -42,7 +42,6 @@ impl AssetManager {
         
         let asset = Asset::new(name.to_string(), img);
         self.assets.insert(name.to_string(), asset);
-        println!("Successfully loaded asset: {}", name);
         Ok(())
     }
 
@@ -62,5 +61,13 @@ impl AssetManager {
     
     pub fn has_asset(&self, name: &str) -> bool {
         self.assets.contains_key(name)
+    }
+
+    pub fn debug_print_loaded_assets(&self) {
+        println!("=== Loaded Assets ===");
+        for (name, _) in &self.assets {
+            println!("Asset: {}", name);
+        }
+        println!("====================");
     }
 }
