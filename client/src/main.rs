@@ -49,7 +49,7 @@ impl GameState {
             }
         };
 
-        nc.send("login abc 123\r\n".to_string());
+        nc.send("register abc 123\r\n".to_string());
 
 
         let pos = Position::new(100.0, 100.0); // Start at a more visible position
