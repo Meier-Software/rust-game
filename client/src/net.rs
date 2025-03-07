@@ -1,11 +1,10 @@
-use specs::{Join, ReadStorage, System};
 use std::{
     io::{Read, Write},
     net::TcpStream,
 };
-
 use crate::engine::event::*;
 
+use specs::prelude::*;
 use specs::{Component, prelude::*};
 
 #[derive(Component)]
@@ -34,20 +33,27 @@ impl<'ecs_life> System<'ecs_life> for NetworkingOut {
     // SystemData is what you are requesting from the world.
     type SystemData = (
         WriteStorage<'ecs_life, NetClient>,
-        ReadStorage<'ecs_life, Event>,
-    );
+        ReadStorage<'ecs_life, EventType>,
+        ReadStorage<'ecs_life, Event>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut a, b) = data;
-        unsafe {
-            for nc in a.as_mut_slice().assume_init_mut() {
-                for event in b.join() {
-                    let line = format!("{:?}", event);
+        let (mut net_client, event_type, event) = data;
+        for nc in (&mut net_client).join(){
+            println!("NC");
+            for (event_type, event) in (&event_type, &event).join(){
+                if *event_type == EventType::NetSend {
+                    println!("sending line");
+                    let line = format!("{}", event.event);
+                    println!("sent line");
 
                     nc.send(line);
+                }else{
+                    println!("Other event type")
                 }
             }
+
         }
+
     }
 }
 
@@ -61,15 +67,15 @@ impl<'ecs_life> System<'ecs_life> for NetworkingIn {
 
     fn run(&mut self, data: Self::SystemData) {
         let (mut a) = data;
-        unsafe {
+        // unsafe {
 
-            for nc in a.as_mut_slice().assume_init_mut(){
-                let mut line = String::new();
-                let ret = nc.tcp.read_to_string(&mut line);
-                println!("recv {:?}", ret)
+        //     for nc in a.as_mut_slice().assume_init_mut(){
+        //         let mut line = String::new();
+        //         let ret = nc.tcp.read_to_string(&mut line);
+        //         println!("recv {:?}", ret)
                 
-            }
-        }
+        //     }
+        // }
        
     }
 }

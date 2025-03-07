@@ -58,10 +58,15 @@ impl Engine {
                 let username = "hjk";
                 let password = "123";
 
-                let line = format!("login {} {}\r\n", username, password);
+                let line = format!("register {} {}\r\n", username, password);
+                println!("{}", line);
                 self.fire_event(EventType::NetSend, line);
+
+                // self.state = State::InGame;
             }
-            State::InMenu => todo!(),
+            State::InMenu => {
+                todo!();
+            }
             State::InGame => todo!(),
         }
 
@@ -77,12 +82,16 @@ impl Engine {
     // Updated once per frame. FPSRate
     pub fn fps_update(&mut self) {}
 
-    pub fn close(&mut self) {}
+    pub fn close(&mut self) {
+        
+    }
 }
 
 impl Engine {
     pub fn fire_event(&mut self, event_type: EventType, event: String) {
-        let event = Event::new(event_type, event);
+
+        // println!("fired {:?} - {}", event_type, event);
+        let event = Event::new(event);
         self.world
             .create_entity()
             .with(event_type.clone())
