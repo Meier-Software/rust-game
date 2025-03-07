@@ -16,9 +16,9 @@ pub enum Direction {
 }
 
 
-pub const MOVEMENT_SPEED: f32 = 2.0;
+pub const MOVEMENT_SPEED: f32 = 1.0;
 pub const WORLD_SIZE: f32 = 800.0;
-pub const PLAYER_SIZE: f32 = 32.0;
+pub const PLAYER_SIZE: f32 = 16.0;
 
 pub struct MovementState {
     pub is_moving: bool,

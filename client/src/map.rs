@@ -14,14 +14,14 @@ impl Map {
         let grid = vec![
             vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            vec![1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+            vec![1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1],
             vec![1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
             vec![1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1],
             vec![1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1],
             vec![1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1],
             vec![1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1],
             vec![1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-            vec![1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+            vec![1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1],
             vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         ];
@@ -75,8 +75,8 @@ impl Map {
 
     // Check if a position is valid (not a wall)
     pub fn is_valid_position(&self, x: f32, y: f32, grid_size: f32) -> bool {
-        // Calculate the player's hitbox corners (assuming player is centered at x,y)
-        let player_half_size = crate::input::PLAYER_SIZE / 2.0;
+        // Calculate the player's hitbox corners with a slightly smaller hitbox for better collision
+        let player_half_size = crate::input::PLAYER_SIZE / 2.5; // Reduced from 2.0 to 2.5 for tighter collision
         
         // Check all four corners of the player's hitbox
         let corners = [

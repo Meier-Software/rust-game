@@ -10,11 +10,11 @@ use protocol::Position;
 use assets::AssetManager;
 
 // Constants that remain in main.rs
-const GRID_SIZE: f32 = 64.0;
+const GRID_SIZE: f32 = 16.0;
 const SPRITE_SHEET_WIDTH: f32 = 64.0; // Width of each sprite in the sheet
 const SPRITE_SHEET_HEIGHT: f32 = 64.0; // Height of each sprite in the sheet
 const ANIMATION_FRAME_TIME: f32 = 0.05; // Halved from 0.1 to make animation twice as fast
-const CAMERA_ZOOM: f32 = 2.0; // Camera zoom factor (higher = more zoomed in)
+const CAMERA_ZOOM: f32 = 4.0; // Increased from 2.0 to 4.0 for a more zoomed in view
 const DIALOGUE_PADDING: f32 = 20.0;
 const DIALOGUE_HEIGHT: f32 = 150.0;
 
@@ -59,45 +59,69 @@ impl GameState {
         if let Err(e) = asset_manager.load_asset(
             ctx, 
             "player", 
-            "/sprites/player/professor_walk_cycle_no_hat.png"
+            "/player/professor_walk_cycle_no_hat.png"
         ) {
             println!("Failed to load sprite: {}", e);
             // Try an alternative path as fallback
-            asset_manager.load_asset(
+            if let Err(e) = asset_manager.load_asset(
                 ctx,
                 "player",
-                "sprites/player/professor_walk_cycle_no_hat.png"
-            ).expect("Failed to load player sprite");
+                "player/professor_walk_cycle_no_hat.png"
+            ) {
+                println!("Failed to load player sprite with alternative path: {}", e);
+                // Try with absolute path as last resort
+                asset_manager.load_asset(
+                    ctx,
+                    "player",
+                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/player/professor_walk_cycle_no_hat.png"
+                ).expect("Failed to load player sprite");
+            }
         }
         
         // Load wall sprite
         if let Err(e) = asset_manager.load_asset(
             ctx,
             "wall",
-            "/sprites/tiles/wall.png"
+            "/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
         ) {
             println!("Failed to load wall sprite: {}", e);
             // Try an alternative path as fallback
-            asset_manager.load_asset(
+            if let Err(e) = asset_manager.load_asset(
                 ctx,
                 "wall",
-                "sprites/tiles/wall.png"
-            ).expect("Failed to load wall sprite");
+                "Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
+            ) {
+                println!("Failed to load wall sprite with alternative path: {}", e);
+                // Try with absolute path as last resort
+                asset_manager.load_asset(
+                    ctx,
+                    "wall",
+                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"
+                ).expect("Failed to load wall sprite");
+            }
         }
         
         // Load floor sprite
         if let Err(e) = asset_manager.load_asset(
             ctx,
             "floor",
-            "/sprites/tiles/floor.png"
+            "/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
         ) {
             println!("Failed to load floor sprite: {}", e);
             // Try an alternative path as fallback
-            asset_manager.load_asset(
+            if let Err(e) = asset_manager.load_asset(
                 ctx,
                 "floor",
-                "sprites/tiles/floor.png"
-            ).expect("Failed to load floor sprite");
+                "Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
+            ) {
+                println!("Failed to load floor sprite with alternative path: {}", e);
+                // Try with absolute path as last resort
+                asset_manager.load_asset(
+                    ctx,
+                    "floor",
+                    "/Users/henrymeier/Rust/rust-game/client/assets/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"
+                ).expect("Failed to load floor sprite");
+            }
         }
 
         // Send registration/login command
@@ -125,7 +149,7 @@ impl GameState {
         }
     }
 
-    pub fn run_stage(&mut self, ctx: &mut Context) {
+    pub fn run_stage(&mut self, ctx: &mut ggez::Context) {
         match self.stage {
             Stage::PreAuth => {
                 // println!("Pre Auth");
@@ -264,7 +288,7 @@ impl GameState {
                     // Draw the player sprite at the correct position
                     let draw_params = DrawParam::default()
                         .dest([self.pos.x, self.pos.y])
-                        .scale([1.0, 1.0])
+                        .scale([input::PLAYER_SIZE / SPRITE_SHEET_WIDTH, input::PLAYER_SIZE / SPRITE_SHEET_HEIGHT])
                         .src(src_rect);
 
                     canvas.draw(&player_asset.img, draw_params);
