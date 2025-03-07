@@ -4,8 +4,8 @@ use std::time::Duration;
 use ggez::{
     Context, GameResult, event,
     graphics::{self, Color, DrawParam, Image, Rect},
-    mint::Point2,
     input::keyboard::{self, KeyCode},
+    mint::Point2,
 };
 use net::NetClient;
 use protocol::Position;
@@ -45,7 +45,7 @@ pub struct GameState {
 
     sp: Image,
     pos: Position,
-    
+
     // Animation state
     current_frame: usize,
     frame_timer: f32,
@@ -58,14 +58,16 @@ impl GameState {
         let mut nc = NetClient::new();
 
         // Load the player sprite with proper error handling
-        let player_sprite = match Image::from_path(ctx, "/sprites/player/professor_walk_cycle_no_hat.png") {
-            Ok(img) => img,
-            Err(e) => {
-                println!("Failed to load sprite: {}", e);
-                // Try an alternative path as fallback
-                Image::from_path(ctx, "sprites/player/professor_walk_cycle_no_hat.png").expect("Failed to load player sprite")
-            }
-        };
+        let player_sprite =
+            match Image::from_path(ctx, "/sprites/player/professor_walk_cycle_no_hat.png") {
+                Ok(img) => img,
+                Err(e) => {
+                    println!("Failed to load sprite: {}", e);
+                    // Try an alternative path as fallback
+                    Image::from_path(ctx, "sprites/player/professor_walk_cycle_no_hat.png")
+                        .expect("Failed to load player sprite")
+                }
+            };
 
         // Send registration/login command
         nc.send("register abc 123\r\n".to_string());
@@ -86,7 +88,7 @@ impl GameState {
         }
     }
 
-    pub fn run_stage(&mut self) {
+    pub fn run_stage(&mut self, ctx: &mut Context) {
         match self.stage {
             Stage::PreAuth => {
                 // println!("Pre Auth");
@@ -99,9 +101,9 @@ impl GameState {
                             println!("Authentication successful, entering game");
                             self.stage = Stage::InGame;
                         }
-                    },
+                    }
                     Err(err) => match err {
-                        net::NCError::NoNewData => {},
+                        net::NCError::NoNewData => {}
                         net::NCError::ConnectionError(e) => {
                             println!("Connection error: {}", e);
                         }
@@ -113,9 +115,9 @@ impl GameState {
                 // Check for server messages
                 let line = self.nc.recv();
                 match line {
-                    Ok(ok) => println!("Server: {}", ok),
+                    Ok(ok) => println!("{}", ok),
                     Err(err) => match err {
-                        net::NCError::NoNewData => {},
+                        net::NCError::NoNewData => {}
                         net::NCError::ConnectionError(e) => {
                             println!("Connection error: {}", e);
                             // Optionally transition back to PreAuth stage
@@ -129,20 +131,85 @@ impl GameState {
 
     pub fn draw_stage(&mut self, ctx: &mut Context) {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
+        // TODO: Set camera here
 
         match self.stage {
             Stage::PreAuth => {
                 // Draw login/authentication screen
                 let screen_width = ctx.gfx.window().inner_size().width as f32;
                 let screen_height = ctx.gfx.window().inner_size().height as f32;
-                
+
                 // Draw text for login screen
                 let text = graphics::Text::new("Authenticating...");
                 let text_pos = [screen_width / 2.0 - 50.0, screen_height / 2.0];
-                canvas.draw(&text, DrawParam::default().dest(text_pos).color(Color::WHITE));
+                canvas.draw(
+                    &text,
+                    DrawParam::default().dest(text_pos).color(Color::WHITE),
+                );
             }
             Stage::InMenu => {}
             Stage::InGame => {
+                // Handle keyboard input for movement
+                let mut dx = 0.0;
+                let mut dy = 0.0;
+
+                if keyboard::is_key_pressed(ctx, KeyCode::Up)
+                    || keyboard::is_key_pressed(ctx, KeyCode::W)
+                {
+                    dy -= MOVEMENT_SPEED;
+                    self.direction = Direction::Up;
+                }
+                if keyboard::is_key_pressed(ctx, KeyCode::Down)
+                    || keyboard::is_key_pressed(ctx, KeyCode::S)
+                {
+                    dy += MOVEMENT_SPEED;
+                    self.direction = Direction::Down;
+                }
+                if keyboard::is_key_pressed(ctx, KeyCode::Left)
+                    || keyboard::is_key_pressed(ctx, KeyCode::A)
+                {
+                    dx -= MOVEMENT_SPEED;
+                    self.direction = Direction::Left;
+                }
+                if keyboard::is_key_pressed(ctx, KeyCode::Right)
+                    || keyboard::is_key_pressed(ctx, KeyCode::D)
+                {
+                    dx += MOVEMENT_SPEED;
+                    self.direction = Direction::Right;
+                }
+
+                // Update animation state
+                self.is_moving = dx != 0.0 || dy != 0.0;
+
+                if self.is_moving {
+                    // Update animation frame
+                    self.frame_timer += ctx.time.delta().as_secs_f32();
+                    if self.frame_timer >= ANIMATION_FRAME_TIME {
+                        self.frame_timer = 0.0;
+                        self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
+                    }
+                }
+
+                // If there's movement, update position and send to server
+                if dx != 0.0 || dy != 0.0 {
+                    // Update local position
+                    self.pos.x += dx;
+                    self.pos.y += dy;
+
+                    // Ensure player stays within world bounds
+                    self.pos.x = self.pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
+                    self.pos.y = self.pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
+
+                    // Send movement command to server
+                    // Convert to integer deltas for the server
+                    let dx_int = dx as i32;
+                    let dy_int = dy as i32;
+                    if dx_int != 0 || dy_int != 0 {
+                        let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
+                        self.nc.send(move_cmd);
+                    }
+                }
+
                 let screen_width = ctx.gfx.window().inner_size().width as f32;
                 let screen_height = ctx.gfx.window().inner_size().height as f32;
 
@@ -158,23 +225,27 @@ impl GameState {
                 // Down is actually Up
                 // Up is actually Right
                 let direction_offset = match self.direction {
-                    Direction::Left => 1,   
-                    Direction::Right => 2,  
-                    Direction::Down => 3,   
-                    Direction::Up => 0,     
+                    Direction::Up => 0,
+                    Direction::Left => 1,
+                    Direction::Down => 2,
+                    Direction::Right => 3,
                 };
-                
+
                 // Each row in the sprite sheet represents a direction
                 // Each column represents an animation frame
-                let frame_to_use = if self.is_moving { self.current_frame } else { 0 };
+                let frame_to_use = if self.is_moving {
+                    self.current_frame
+                } else {
+                    0
+                };
                 let src_x = (frame_to_use as f32) * SPRITE_SHEET_WIDTH;
                 let src_y = (direction_offset as f32) * SPRITE_SHEET_HEIGHT;
-                
+
                 let src_rect = Rect::new(
                     src_x / self.sp.width() as f32,
                     src_y / self.sp.height() as f32,
                     SPRITE_SHEET_WIDTH / self.sp.width() as f32,
-                    SPRITE_SHEET_HEIGHT / self.sp.height() as f32
+                    SPRITE_SHEET_HEIGHT / self.sp.height() as f32,
                 );
 
                 // Draw the player sprite at the correct position
@@ -186,98 +257,23 @@ impl GameState {
                 canvas.draw(&self.sp, draw_params);
 
                 // Draw position info for debugging
-                let pos_text = graphics::Text::new(format!("Pos: ({:.1}, {:.1})", self.pos.x, self.pos.y));
-                canvas.draw(&pos_text, DrawParam::default().dest([10.0, 10.0]).color(Color::WHITE));
+                let pos_text =
+                    graphics::Text::new(format!("Pos: ({:.1}, {:.1})", self.pos.x, self.pos.y));
+                canvas.draw(
+                    &pos_text,
+                    DrawParam::default().dest([10.0, 10.0]).color(Color::WHITE),
+                );
             }
         }
 
         canvas.finish(ctx).unwrap();
     }
-
-
-    // Add key_down_event handler for one-time key presses
-    fn key_down_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: ggez::input::keyboard::KeyMods, _repeat: bool) -> Result<(), ggez::GameError> {
-        match keycode {
-            KeyCode::Return => {
-                // Toggle between stages for testing
-                if self.stage == Stage::PreAuth {
-                    self.stage = Stage::InGame;
-                } else if self.stage == Stage::InGame {
-                    self.stage = Stage::PreAuth;
-                }
-            },
-            KeyCode::Escape => {
-                // Quit the game
-                ctx.request_quit();
-            },
-            _ => {}
-        }
-        Ok(())
-    }
-
-
-
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
     // Update once per tick.
     fn update(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
-        // Handle keyboard input for movement
-        if self.stage == Stage::InGame {
-            let mut dx = 0.0;
-            let mut dy = 0.0;
-
-            if keyboard::is_key_pressed(ctx, KeyCode::Up) || keyboard::is_key_pressed(ctx, KeyCode::W) {
-                dy -= MOVEMENT_SPEED;
-                self.direction = Direction::Up;
-            }
-            if keyboard::is_key_pressed(ctx, KeyCode::Down) || keyboard::is_key_pressed(ctx, KeyCode::S) {
-                dy += MOVEMENT_SPEED;
-                self.direction = Direction::Down;
-            }
-            if keyboard::is_key_pressed(ctx, KeyCode::Left) || keyboard::is_key_pressed(ctx, KeyCode::A) {
-                dx -= MOVEMENT_SPEED;
-                self.direction = Direction::Left;
-            }
-            if keyboard::is_key_pressed(ctx, KeyCode::Right) || keyboard::is_key_pressed(ctx, KeyCode::D) {
-                dx += MOVEMENT_SPEED;
-                self.direction = Direction::Right;
-            }
-
-            // Update animation state
-            self.is_moving = dx != 0.0 || dy != 0.0;
-            
-            if self.is_moving {
-                // Update animation frame
-                self.frame_timer += ctx.time.delta().as_secs_f32();
-                if self.frame_timer >= ANIMATION_FRAME_TIME {
-                    self.frame_timer = 0.0;
-                    self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
-                }
-            }
-
-            // If there's movement, update position and send to server
-            if dx != 0.0 || dy != 0.0 {
-                // Update local position
-                self.pos.x += dx;
-                self.pos.y += dy;
-                
-                // Ensure player stays within world bounds
-                self.pos.x = self.pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-                self.pos.y = self.pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-                
-                // Send movement command to server
-                // Convert to integer deltas for the server
-                let dx_int = dx as i32;
-                let dy_int = dy as i32;
-                if dx_int != 0 || dy_int != 0 {
-                    let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
-                    self.nc.send(move_cmd);
-                }
-            }
-        }
-
-        self.run_stage();
+        self.run_stage(ctx);
         Ok(())
     }
 

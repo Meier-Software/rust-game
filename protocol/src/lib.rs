@@ -1,5 +1,3 @@
-use specs::{Component, VecStorage, World, WorldExt};
-
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -10,13 +8,6 @@ impl Position {
     }
 }
 
-pub fn world_register(world: &mut World) {
-    // world.register::<Position>();
-    // world.register::<Facing>();
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
 pub enum Facing {
     North,
     East,
@@ -31,10 +22,4 @@ pub enum ServerToClient {
 pub enum ClientToServer {
     AttemptPlayerMove(Position),
     AttemptPlayerFacingChange(Facing),
-}
-
-pub fn init_world() -> World {
-    let mut world = World::new();
-
-    world
 }
