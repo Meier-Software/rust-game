@@ -37,7 +37,24 @@ impl Map {
     }
 
     pub fn draw(&self, _ctx: &mut Context, canvas: &mut graphics::Canvas, asset_manager: &AssetManager, grid_size: f32) -> GameResult<()> {
-        // Get the wall asset
+        // First draw floor tiles for all cells
+        if let Some(floor_asset) = asset_manager.get_asset("floor") {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    if self.grid[y][x] == 0 {
+                        // Draw floor at this position
+                        let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                        canvas.draw(
+                            &floor_asset.img,
+                            graphics::DrawParam::default()
+                                .dest(dest)
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Then draw wall tiles on top
         if let Some(wall_asset) = asset_manager.get_asset("wall") {
             for y in 0..self.height {
                 for x in 0..self.width {

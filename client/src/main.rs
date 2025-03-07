@@ -84,6 +84,21 @@ impl GameState {
                 "sprites/tiles/wall.png"
             ).expect("Failed to load wall sprite");
         }
+        
+        // Load floor sprite
+        if let Err(e) = asset_manager.load_asset(
+            ctx,
+            "floor",
+            "/sprites/tiles/floor.png"
+        ) {
+            println!("Failed to load floor sprite: {}", e);
+            // Try an alternative path as fallback
+            asset_manager.load_asset(
+                ctx,
+                "floor",
+                "sprites/tiles/floor.png"
+            ).expect("Failed to load floor sprite");
+        }
 
         // Send registration/login command
         nc.send("register xyz 123\r\n".to_string());
