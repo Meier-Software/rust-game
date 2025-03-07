@@ -22,8 +22,10 @@ mod net;
 mod assets;
 mod input;
 mod player;
+mod map;
 
-#[derive(PartialEq)]
+use map::Map;
+
 pub enum Stage {
     PreAuth,
     InMenu,
@@ -43,11 +45,10 @@ pub struct GameState {
     frame_timer: f32,
     direction: input::Direction,
     is_moving: bool,
+    
+    // Map
+    map: Map,
 }
-
-
-
-
 
 impl GameState {
     pub fn new(ctx: &mut ggez::Context) -> Self {
@@ -68,13 +69,33 @@ impl GameState {
                 "sprites/player/professor_walk_cycle_no_hat.png"
             ).expect("Failed to load player sprite");
         }
+        
+        // Load wall sprite
+        if let Err(e) = asset_manager.load_asset(
+            ctx,
+            "wall",
+            "/sprites/tiles/wall.png"
+        ) {
+            println!("Failed to load wall sprite: {}", e);
+            // Try an alternative path as fallback
+            asset_manager.load_asset(
+                ctx,
+                "wall",
+                "sprites/tiles/wall.png"
+            ).expect("Failed to load wall sprite");
+        }
 
         // Send registration/login command
         nc.send("register xyz 123\r\n".to_string());
         // Wait a bit for server response
         std::thread::sleep(Duration::from_millis(100));
 
-        let pos = Position::new(100.0, 100.0); // Start at a more visible position
+        // Create the map
+        let map = Map::new();
+        
+        // Start the player at a valid position in the map (e.g., in an open area)
+        // Using grid coordinates 1,1 which should be an open space in our map
+        let pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
 
         Self {
             stage: Stage::PreAuth,
@@ -85,6 +106,7 @@ impl GameState {
             frame_timer: 0.0,
             direction: input::Direction::Down,
             is_moving: false,
+            map,
         }
     }
 
@@ -145,7 +167,7 @@ impl GameState {
                 }
                 
                 // Update position
-                input::update_position(&mut self.pos, &movement);
+                input::update_position(&mut self.pos, &movement, &self.map, GRID_SIZE);
                 
                 // Send movement to server
                 input::send_movement_to_server(&mut self.nc, &movement);
@@ -155,7 +177,6 @@ impl GameState {
 
     pub fn draw_stage(&mut self, ctx: &mut Context) {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
-        // TODO: Set camera here
 
         match self.stage {
             Stage::PreAuth => {
@@ -178,8 +199,21 @@ impl GameState {
 
                 let zoomed_width = screen_width / CAMERA_ZOOM;
                 let zoomed_height = screen_height / CAMERA_ZOOM;
-
-                canvas.set_screen_coordinates(Rect::new(0.0, 0.0, zoomed_width, zoomed_height));
+                
+                // Center the camera on the player
+                let camera_x = self.pos.x - zoomed_width / 2.0;
+                let camera_y = self.pos.y - zoomed_height / 2.0;
+                
+                // Set the camera view
+                canvas.set_screen_coordinates(Rect::new(
+                    camera_x, 
+                    camera_y, 
+                    zoomed_width, 
+                    zoomed_height
+                ));
+                
+                // Draw the map first (so it's behind the player)
+                self.map.draw(ctx, &mut canvas, &self.asset_manager, GRID_SIZE).unwrap();
 
                 // Get player sprite
                 if let Some(player_asset) = self.asset_manager.get_asset("player") {
@@ -217,12 +251,16 @@ impl GameState {
                     canvas.draw(&player_asset.img, draw_params);
                 }
 
-                // Draw position info for debugging
+                // Draw position info for debugging - fixed to the camera view
                 let pos_text =
                     graphics::Text::new(format!("Pos: ({:.1}, {:.1})", self.pos.x, self.pos.y));
+                
+                // Draw UI elements in screen coordinates by adding the camera position
                 canvas.draw(
                     &pos_text,
-                    DrawParam::default().dest([10.0, 10.0]).color(Color::WHITE),
+                    DrawParam::default()
+                        .dest([camera_x + 10.0, camera_y + 10.0])
+                        .color(Color::WHITE),
                 );
             }
         }

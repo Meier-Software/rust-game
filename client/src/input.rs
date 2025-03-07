@@ -4,6 +4,7 @@ use ggez::{
 };
 use crate::net::NetClient;
 use protocol::Position;
+use crate::map::Map;
 
 // Direction enum for player animation
 #[derive(PartialEq, Clone, Copy)]
@@ -14,7 +15,7 @@ pub enum Direction {
     Up,
 }
 
-// Constants moved from main.rs
+
 pub const MOVEMENT_SPEED: f32 = 2.0;
 pub const WORLD_SIZE: f32 = 800.0;
 pub const PLAYER_SIZE: f32 = 32.0;
@@ -31,26 +32,26 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     let mut dy = 0.0;
     let mut direction = Direction::Down;
     
-    if keyboard::is_key_pressed(ctx, KeyCode::Up)
-        || keyboard::is_key_pressed(ctx, KeyCode::W)
+    if ctx.keyboard.is_key_pressed(KeyCode::Up)
+        || ctx.keyboard.is_key_pressed(KeyCode::W)
     {
         dy -= MOVEMENT_SPEED;
         direction = Direction::Up;
     }
-    if keyboard::is_key_pressed(ctx, KeyCode::Down)
-        || keyboard::is_key_pressed(ctx, KeyCode::S)
+    if ctx.keyboard.is_key_pressed(KeyCode::Down)
+        || ctx.keyboard.is_key_pressed(KeyCode::S)
     {
         dy += MOVEMENT_SPEED;
         direction = Direction::Down;
     }
-    if keyboard::is_key_pressed(ctx, KeyCode::Left)
-        || keyboard::is_key_pressed(ctx, KeyCode::A)
+    if ctx.keyboard.is_key_pressed(KeyCode::Left)
+        || ctx.keyboard.is_key_pressed(KeyCode::A)
     {
         dx -= MOVEMENT_SPEED;
         direction = Direction::Left;
     }
-    if keyboard::is_key_pressed(ctx, KeyCode::Right)
-        || keyboard::is_key_pressed(ctx, KeyCode::D)
+    if ctx.keyboard.is_key_pressed(KeyCode::Right)
+        || ctx.keyboard.is_key_pressed(KeyCode::D)
     {
         dx += MOVEMENT_SPEED;
         direction = Direction::Right;
@@ -66,11 +67,21 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
 }
 
-pub fn update_position(pos: &mut Position, movement: &MovementState) {
+pub fn update_position(pos: &mut Position, movement: &MovementState, map: &Map, grid_size: f32) {
     if movement.is_moving {
-        // Update local position
-        pos.x += movement.dx;
-        pos.y += movement.dy;
+        // Calculate new position
+        let new_x = pos.x + movement.dx;
+        let new_y = pos.y + movement.dy;
+        
+        // Check horizontal movement
+        if map.is_valid_position(new_x, pos.y, grid_size) {
+            pos.x = new_x;
+        }
+        
+        // Check vertical movement
+        if map.is_valid_position(pos.x, new_y, grid_size) {
+            pos.y = new_y;
+        }
 
         // Ensure player stays within world bounds
         pos.x = pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
