@@ -21,7 +21,6 @@ defmodule ZoneManager do
         send(hub_pid, {:player_join, username, pid})
         loop_manager(zones)
 
-
       {:move_zone, zone, player_pid} ->
         Logger.info("Player-(#{player_pid}) requested Zone-(#{zone}) movement")
         loop_manager(zones)

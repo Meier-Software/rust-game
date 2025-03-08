@@ -29,6 +29,7 @@ defmodule Client.Authed do
 
       ["stats"] ->
         send(player_pid, {:stats, self()})
+
         receive do
           {:stats, stats, info} -> "#{inspect(stats)} #{inspect(info)}"
         end
@@ -48,7 +49,6 @@ defmodule Client.Authed do
         # Logger.info("Moving player.")
         "Moved x#{inspect(x)} y#{inspect(y)}"
 
-
       ["update", "server"] ->
         Logger.info("Recompiling server.")
         Server.recompile()
@@ -63,8 +63,8 @@ defmodule Client.Authed do
         Logger.info("Help.")
         "You used the help command to get info about #{command}."
 
-      _ ->
-        Logger.info("unimplemented")
+      abc ->
+        Logger.info "unimplemented " <> inspect(abc)
         "Invalid protocol."
     end
   end
@@ -83,7 +83,6 @@ defmodule Client.Authed do
         line = "stats collected."
         write_line(line, client_socket)
         loop_client(client_socket, auth, player_pid)
-
     after
       0 ->
         line = read_line(client_socket)

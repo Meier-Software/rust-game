@@ -27,7 +27,7 @@ defmodule Database do
     {:row, [player_count]} = Exqlite.Sqlite3.step(conn, statement)
     :ok = Exqlite.Sqlite3.release(conn, statement)
 
-    Logger.info "DB Player count #{inspect(player_count)}"
+    Logger.info("DB Player count #{inspect(player_count)}")
 
     loop_db(conn, player_count)
   end

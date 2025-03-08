@@ -1,6 +1,6 @@
 use crate::assets::AssetManager;
-use crate::input::Direction;
 use ggez::{Context, GameResult, graphics};
+use protocol::Facing;
 
 // Wall types for different wall appearances
 #[derive(Clone, Copy, PartialEq)]
@@ -290,7 +290,7 @@ impl Map {
         x: f32,
         y: f32,
         grid_size: f32,
-    ) -> Option<(usize, usize, Direction)> {
+    ) -> Option<(usize, usize, Facing)> {
         // Calculate the grid position of the player's center
         let center_x = (x / grid_size) as usize;
         let center_y = (y / grid_size) as usize;
@@ -307,21 +307,21 @@ impl Map {
                     if *other_dest_room == prev_room && *dest_room == self.current_room {
                         // Determine the direction to offset the player from the door
                         // This prevents the player from immediately triggering the door again
+                        use protocol::Facing::*;
                         let direction = if *other_door_y == 1 {
                             // Door is at the top of the room, move player down
-                            Direction::Down
+                            South
                         } else if *other_door_y == self.rooms[self.current_room].height - 2 {
                             // Door is at the bottom of the room, move player up
-                            Direction::Up
+                            North
                         } else if *other_door_x == 1 {
                             // Door is at the left of the room, move player right
-                            Direction::Right
+                            East
                         } else if *other_door_x == self.rooms[self.current_room].width - 2 {
                             // Door is at the right of the room, move player left
-                            Direction::Left
-                        } else {
+West                        } else {
                             // Default direction if door position is ambiguous
-                            Direction::Down
+    South                        
                         };
 
                         // Return the position of the door in the new room and the direction to offset

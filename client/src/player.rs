@@ -3,13 +3,13 @@ use ggez::{
     graphics::{self, DrawParam},
 };
 use protocol::Position;
+use protocol::Facing;
 
 use crate::{
     assets::AssetManager,
-    input::{Direction, MovementState, PLAYER_SIZE},
+    input::{ MovementState, PLAYER_SIZE},
     map::Map,
 };
-
 // Animation constants
 const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
@@ -56,7 +56,7 @@ pub struct Player {
     pub pos: Position,
     pub current_frame: usize,
     pub frame_timer: f32,
-    pub direction: Direction,
+    pub direction: Facing,
     pub is_moving: bool,
     pub idle_timer: f32,               // Track how long the player has been idle
     pub is_in_idle_animation: bool,    // Whether the player is in the idle animation
@@ -70,7 +70,7 @@ impl Player {
             pos,
             current_frame: 0,
             frame_timer: 0.0,
-            direction: Direction::Down,
+            direction: Facing::South,
             is_moving: false,
             idle_timer: 0.0,
             is_in_idle_animation: false,
@@ -177,11 +177,12 @@ impl Player {
         let asset_name = if self.is_moving {
             // For moving animations, use the run animations with the current frame
             let frame = (self.current_frame % MAX_FRAMES) + 1; // Frames are 1-indexed in our asset names
+            use protocol::Facing::*;
             match self.direction {
-                Direction::Up => format!("{}_run_up_{}", character, frame),
-                Direction::Left => format!("{}_run_right_{}", character, frame), // Use right sprites but flip them
-                Direction::Down => format!("{}_run_down_{}", character, frame),
-                Direction::Right => format!("{}_run_right_{}", character, frame),
+                North => format!("{}_run_up_{}", character, frame),
+                East => format!("{}_run_right_{}", character, frame), // Use right sprites but flip them
+                South => format!("{}_run_down_{}", character, frame),
+                West => format!("{}_run_left_{}", character, frame),
             }
         } else if self.is_in_idle_animation {
             // For idle animation, use the idle animation frames and loop through them
@@ -189,11 +190,12 @@ impl Player {
             format!("{}_idle_{}", character, frame)
         } else {
             // For regular idle state, use the idle sprites
+            use protocol::Facing::*;
             match self.direction {
-                Direction::Up => format!("{}_idle_up", character),
-                Direction::Left => format!("{}_idle_right", character), // Use right idle but flip it
-                Direction::Down => format!("{}_idle_down", character),
-                Direction::Right => format!("{}_idle_right", character),
+                North => format!("{}_idle_up", character),
+                East => format!("{}_idle_right", character), // Use right idle but flip it
+                South => format!("{}_idle_down", character),
+                West => format!("{}_idle_right", character),
             }
         };
 
@@ -205,7 +207,7 @@ impl Player {
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
             // Determine if we need to flip the sprite horizontally (for left direction)
-            let flip_x = self.direction == Direction::Left;
+            let flip_x = self.direction == protocol::Facing::East;
 
             // Draw the hero sprite at the correct position
             let mut draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([

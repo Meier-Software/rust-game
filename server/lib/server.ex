@@ -29,7 +29,6 @@ defmodule Server do
     # {:ok, observer_pid} =
     #   Task.Supervisor.start_child(Server.Services, fn -> :observer.start() end)
 
-
     Logger.info("Running the Database service at #{inspect(db_pid)}")
 
     loop_coordinator()

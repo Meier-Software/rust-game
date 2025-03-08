@@ -334,12 +334,12 @@ impl GameState {
 
             // Offset the player from the door based on the direction
             // This prevents the player from immediately triggering the door again
-            use input::Direction::*;
+            use protocol::Facing::*;
             let (a, b, c) = match direction {
-                Up => (base_x, base_y - GRID_SIZE, Up),
-                Down => (base_x, base_y + GRID_SIZE, Down),
-                Left => (base_x - GRID_SIZE, base_y, Left),
-                Right => (base_x + GRID_SIZE, base_y, Right),
+                North => (base_x, base_y - GRID_SIZE, North),
+                South => (base_x, base_y + GRID_SIZE, South),
+                West => (base_x - GRID_SIZE, base_y, West),
+                East => (base_x + GRID_SIZE, base_y, East),
             };
             self.players.self_player.pos.x = a;
             self.players.self_player.pos.y = b;

@@ -5,7 +5,6 @@ defmodule Client do
   This module handles client networking.
   Combined with a "Player" this should fully support a player joining and playing the game.
   """
-
   def start(client_socket) do
     Logger.info("New client connected.")
     loop_client(client_socket)
@@ -25,8 +24,7 @@ defmodule Client do
 
   defp process_line(line, client_socket) do
     cmds = Client.Commands.line_to_commands(line)
-    Logger.info inspect(cmds)
-
+    Logger.info(inspect(cmds))
 
     case cmds do
       ["login", username, password] ->
@@ -35,7 +33,6 @@ defmodule Client do
         case Db.DbApi.get_player(username) do
           {:player, false} ->
             Logger.info("User #{username} not in the db.")
-
             "Login error."
 
           {:player, true} ->
@@ -51,7 +48,6 @@ defmodule Client do
             Logger.info("Registering new user #{username}.")
             Db.DbApi.new_player(username, password)
             Client.Authed.start(client_socket, username)
-
             "Registered user."
 
           {:player, true} ->

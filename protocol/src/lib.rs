@@ -7,13 +7,27 @@ impl Position {
         Self { x, y }
     }
 }
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Facing {
     North,
     East,
     South,
     West,
 }
+impl std::fmt::Display for Facing{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Facing::*;
+        let a = match self{
+            North => "North".to_string(),
+            East => "Eorth".to_string(),
+            South => "Sorth".to_string(),
+            West => "Worth".to_string(),
+        };
+        write!(f, "{}", a)
+    }
+}
+
+
 
 pub enum ServerToClient {
     EntityMoved(Position),
@@ -31,7 +45,7 @@ impl ClientToServer {
         use ClientToServer::*;
         let line = match self {
             AttemptPlayerMove(position) => format!("move {} {}\r\n", position.x, position.y),
-            AttemptPlayerFacingChange(facing) => todo!(),
+            AttemptPlayerFacingChange(facing) => format!("face {}\r\n", facing),
             Register(username, password) => format!("register {} {}\r\n", username, password),
         };
         line
