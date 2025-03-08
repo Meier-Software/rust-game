@@ -33,7 +33,13 @@ pub fn main() -> GameResult {
     simp_log.init().unwrap();
     log::info!("TESTING LOGGER.");
 
-    let resource_dir = PathBuf::from("./client/assets");
+    // Use the correct resource path based on the current directory
+    let resource_dir = if std::path::Path::new("./assets").exists() {
+        PathBuf::from("./assets")
+    } else {
+        PathBuf::from("./client/assets")
+    };
+    
     let cb = ggez::ContextBuilder::new("simple_game", "ggez")
         .window_setup(ggez::conf::WindowSetup::default().title("Simple 2D Game"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))

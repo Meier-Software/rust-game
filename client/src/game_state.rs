@@ -6,10 +6,10 @@ use protocol::Position;
 
 use crate::{
     assets::AssetManager,
-    input::{self},
+    input::{self, handle_key_press},
     map::Map,
     net::NetClient,
-    player::Players,
+    player::{Players, CharacterType},
 };
 
 // Constants
@@ -43,41 +43,15 @@ impl GameState {
         let mut nc = NetClient::new();
         let mut asset_manager = AssetManager::new();
 
-        // Load assets
-        let assets = [
-            // Hero sprites for different animations and directions
-            ("hero_idle_down", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_idle_anim/knight_m_idle_anim_f1.png"),
-            ("hero_idle_up", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_idle_anim/knight_m_idle_anim_f1.png"),
-            ("hero_idle_right", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_idle_anim/knight_m_idle_anim_f1.png"),
-            
-            // Idle animation frames - these are used after 10 seconds of inactivity
-            // Using sleep animation for more distinct frames
-            ("hero_idle_1", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_sleep_anim/knight_m_sleep_anim_f1.png"),
-            ("hero_idle_2", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_sleep_anim/knight_m_sleep_anim_f2.png"),
-            ("hero_idle_3", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_sleep_anim/knight_m_sleep_anim_f3.png"),
-            ("hero_idle_4", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_sleep_anim/knight_m_sleep_anim_f4.png"),
-            
-            // Run animations
-            ("hero_run_down_1", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f1.png"),
-            ("hero_run_down_2", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f2.png"),
-            ("hero_run_down_3", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f3.png"),
-            ("hero_run_down_4", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f4.png"),
-            
-            ("hero_run_up_1", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f1.png"),
-            ("hero_run_up_2", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f2.png"),
-            ("hero_run_up_3", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f3.png"),
-            ("hero_run_up_4", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f4.png"),
-            
-            // We don't need left animations anymore as we're using right animations and flipping them
-            
-            ("hero_run_right_1", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f1.png"),
-            ("hero_run_right_2", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f2.png"),
-            ("hero_run_right_3", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f3.png"),
-            ("hero_run_right_4", "/sprites/Files/Assets/Heroes/Knight/Knight_M/knight_m_run_anim/knight_m_run_anim_f4.png"),
-            
-            // Keep the old player asset for backward compatibility
-            ("player", "/sprites/Files/Assets/Heroes/Knight/Knight_M/Knight_M.png"),
-            
+        // Load assets for all character types
+        Self::load_character_assets(ctx, &mut asset_manager, "Knight").expect("Failed to load Knight assets");
+        Self::load_character_assets(ctx, &mut asset_manager, "Archer").expect("Failed to load Archer assets");
+        Self::load_character_assets(ctx, &mut asset_manager, "Elf").expect("Failed to load Elf assets");
+        Self::load_character_assets(ctx, &mut asset_manager, "Lizard").expect("Failed to load Lizard assets");
+        Self::load_character_assets(ctx, &mut asset_manager, "Wizzard").expect("Failed to load Wizard assets");
+        
+        // Load wall assets and other assets
+        let wall_assets = [
             // Wall assets - using the available wall assets
             (
                 "wall_middle",
@@ -119,24 +93,22 @@ impl GameState {
                 "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png",
             ),
         ];
-
-        if let Err(e) = asset_manager.load_assets(ctx, &assets) {
-            println!("Error loading assets: {}", e);
-        }
-
+        
+        asset_manager.load_assets(ctx, &wall_assets).expect("Failed to load wall assets");
+        
         // Send registration/login command
         nc.send("register xyz 123\r\n".to_string());
         // Wait a bit for server response
         std::thread::sleep(std::time::Duration::from_millis(100));
-
+        
         // Create the map
         let map = Map::new();
-
+        
         // Start the player at a valid position in the map (e.g., in an open area)
         // Using grid coordinates 1,1 which should be an open space in our map
         let start_pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
         let players = Players::new("Player".to_string(), start_pos);
-
+        
         Self {
             stage: Stage::PreAuth,
             nc,
@@ -144,6 +116,66 @@ impl GameState {
             players,
             map,
         }
+    }
+    
+    // Helper method to load assets for a specific character type
+    fn load_character_assets(ctx: &mut Context, asset_manager: &mut AssetManager, character: &str) -> GameResult<()> {
+        let gender = "M"; // Using male characters for now
+        let character_path = format!("/sprites/Files/Assets/Heroes/{}/{}_{}",
+            character, character, gender);
+        
+        // Load idle animations
+        asset_manager.load_asset(ctx, &format!("{}_idle_down", character), 
+            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
+                character_path, character.to_lowercase(), gender.to_lowercase(), 
+                character.to_lowercase(), gender.to_lowercase()))?;
+                
+        asset_manager.load_asset(ctx, &format!("{}_idle_up", character), 
+            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
+                character_path, character.to_lowercase(), gender.to_lowercase(), 
+                character.to_lowercase(), gender.to_lowercase()))?;
+                
+        asset_manager.load_asset(ctx, &format!("{}_idle_right", character), 
+            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
+                character_path, character.to_lowercase(), gender.to_lowercase(), 
+                character.to_lowercase(), gender.to_lowercase()))?;
+        
+        // Load idle animation frames - use idle animations for all characters
+        // since not all characters have sleep animations
+        for i in 1..=4 {
+            let anim_path = format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f{}.png", 
+                character_path, character.to_lowercase(), gender.to_lowercase(), 
+                character.to_lowercase(), gender.to_lowercase(), i);
+            
+            asset_manager.load_asset(ctx, &format!("{}_idle_{}", character, i), &anim_path)?;
+        }
+        
+        // Load run animations
+        for i in 1..=4 {
+            // Down direction
+            asset_manager.load_asset(ctx, &format!("{}_run_down_{}", character, i), 
+                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
+                    character_path, character.to_lowercase(), gender.to_lowercase(), 
+                    character.to_lowercase(), gender.to_lowercase(), i))?;
+            
+            // Up direction
+            asset_manager.load_asset(ctx, &format!("{}_run_up_{}", character, i), 
+                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
+                    character_path, character.to_lowercase(), gender.to_lowercase(), 
+                    character.to_lowercase(), gender.to_lowercase(), i))?;
+            
+            // Right direction
+            asset_manager.load_asset(ctx, &format!("{}_run_right_{}", character, i), 
+                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
+                    character_path, character.to_lowercase(), gender.to_lowercase(), 
+                    character.to_lowercase(), gender.to_lowercase(), i))?;
+        }
+        
+        // Load fallback asset
+        asset_manager.load_asset(ctx, character, 
+            &format!("{}/{}_{}.png", character_path, character, gender))?;
+        
+        Ok(())
     }
 
     pub fn update(&mut self, ctx: &Context) -> GameResult<()> {
@@ -190,17 +222,22 @@ impl GameState {
             },
         }
 
-        // Handle movement using the input module
+        // Handle movement input
         let movement = input::handle_input(ctx);
-
-        // Update player state
-        self.players.update(
-            &movement,
-            &self.map,
-            GRID_SIZE,
-            ctx.time.delta().as_secs_f32(),
-        );
-
+        
+        // Handle key press events
+        let key_press = handle_key_press(ctx);
+        if key_press.switch_character {
+            self.players.switch_character();
+        }
+        
+        // Update player position
+        let delta_time = ctx.time.delta().as_secs_f32();
+        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+        
+        // Send movement to server
+        input::send_movement_to_server(&mut self.nc, &movement);
+        
         // Check for door transitions
         let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2.0;
         let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2.0;
@@ -226,9 +263,6 @@ impl GameState {
             self.players.self_player.pos.y = b;
             self.players.self_player.direction = c;
         }
-
-        // Send movement to server
-        input::send_movement_to_server(&mut self.nc, &movement);
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
