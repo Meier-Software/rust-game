@@ -15,6 +15,40 @@ const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better 
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
 const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
 
+// Character types
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CharacterType {
+    Knight,
+    Archer,
+    Elf,
+    Lizard,
+    Wizard,
+}
+
+impl CharacterType {
+    // Get the folder name for this character type
+    pub fn folder_name(&self) -> &'static str {
+        match self {
+            CharacterType::Knight => "Knight",
+            CharacterType::Archer => "Archer",
+            CharacterType::Elf => "Elf",
+            CharacterType::Lizard => "Lizard",
+            CharacterType::Wizard => "Wizzard", // Note the spelling in the folder structure
+        }
+    }
+    
+    // Get the next character type in the cycle
+    pub fn next(&self) -> Self {
+        match self {
+            CharacterType::Knight => CharacterType::Archer,
+            CharacterType::Archer => CharacterType::Elf,
+            CharacterType::Elf => CharacterType::Lizard,
+            CharacterType::Lizard => CharacterType::Wizard,
+            CharacterType::Wizard => CharacterType::Knight,
+        }
+    }
+}
+
 pub struct Player {
     pub name: String,
     pub pos: Position,
@@ -24,6 +58,7 @@ pub struct Player {
     pub is_moving: bool,
     pub idle_timer: f32, // Track how long the player has been idle
     pub is_in_idle_animation: bool, // Whether the player is in the idle animation
+    pub character_type: CharacterType, // The current character model
 }
 
 impl Player {
@@ -37,6 +72,7 @@ impl Player {
             is_moving: false,
             idle_timer: 0.0,
             is_in_idle_animation: false,
+            character_type: CharacterType::Knight,
         }
     }
 
@@ -121,28 +157,32 @@ impl Player {
     }
 
     pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
-        // Get the appropriate sprite based on direction and movement state
+        // Get the character folder name
+        let character = self.character_type.folder_name();
+        let gender = "M"; // Using male characters for now
+        
+        // Get the appropriate sprite based on direction, movement state, and character type
         let asset_name = if self.is_moving {
             // For moving animations, use the run animations with the current frame
             let frame = (self.current_frame % MAX_FRAMES) + 1; // Frames are 1-indexed in our asset names
             match self.direction {
-                Direction::Up => format!("hero_run_up_{}", frame),
-                Direction::Left => format!("hero_run_right_{}", frame), // Use right sprites but flip them
-                Direction::Down => format!("hero_run_down_{}", frame),
-                Direction::Right => format!("hero_run_right_{}", frame),
+                Direction::Up => format!("{}_run_up_{}", character, frame),
+                Direction::Left => format!("{}_run_right_{}", character, frame), // Use right sprites but flip them
+                Direction::Down => format!("{}_run_down_{}", character, frame),
+                Direction::Right => format!("{}_run_right_{}", character, frame),
             }
         } else if self.is_in_idle_animation {
             // For idle animation, use the idle animation frames and loop through them
             let frame = (self.current_frame % MAX_FRAMES) + 1;
-            format!("hero_idle_{}", frame)
+            format!("{}_idle_{}", character, frame)
         } else {
             // For regular idle state, use the idle sprites
             match self.direction {
-                Direction::Up => "hero_idle_up",
-                Direction::Left => "hero_idle_right", // Use right idle but flip it
-                Direction::Down => "hero_idle_down",
-                Direction::Right => "hero_idle_right",
-            }.to_string()
+                Direction::Up => format!("{}_idle_up", character),
+                Direction::Left => format!("{}_idle_right", character), // Use right idle but flip it
+                Direction::Down => format!("{}_idle_down", character),
+                Direction::Right => format!("{}_idle_right", character),
+            }
         };
 
         // Debug print the asset name when in idle animation
@@ -171,7 +211,16 @@ impl Player {
             canvas.draw(&hero_asset.img, draw_params);
         } else {
             // Fallback to the old player sprite if the new assets aren't found
-            if let Some(player_asset) = asset_manager.get_asset("player") {
+            let fallback_asset = format!("{}", character);
+            if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
+                let draw_params = DrawParam::default()
+                    .dest([self.pos.x, self.pos.y])
+                    .scale([PLAYER_SIZE / player_asset.img.width() as f32, 
+                            PLAYER_SIZE / player_asset.img.height() as f32]);
+
+                canvas.draw(&player_asset.img, draw_params);
+            } else if let Some(player_asset) = asset_manager.get_asset("player") {
+                // Ultimate fallback to the original player asset
                 let draw_params = DrawParam::default()
                     .dest([self.pos.x, self.pos.y])
                     .scale([PLAYER_SIZE / player_asset.img.width() as f32, 
@@ -182,6 +231,11 @@ impl Player {
         }
 
         Ok(())
+    }
+
+    pub fn switch_character(&mut self) {
+        self.character_type = self.character_type.next();
+        println!("Switched to character: {:?}", self.character_type);
     }
 }
 
@@ -201,6 +255,11 @@ impl Players {
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
         self.self_player
             .update(movement, map, grid_size, delta_time);
+    }
+    
+    // Add a method to switch the character type for the main player
+    pub fn switch_character(&mut self) {
+        self.self_player.switch_character();
     }
 
     pub fn draw(

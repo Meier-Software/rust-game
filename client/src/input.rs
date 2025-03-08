@@ -1,5 +1,5 @@
 use crate::net::NetClient;
-use ggez::{Context, input::keyboard::KeyCode};
+use ggez::{Context, input::keyboard::{KeyCode, KeyInput}};
 
 // Direction enum for player animation
 #[derive(PartialEq, Clone, Copy)]
@@ -20,6 +20,25 @@ pub struct MovementState {
     pub direction: Direction,
     pub dx: f32,
     pub dy: f32,
+}
+
+// Add a struct to track key press events
+pub struct KeyPressState {
+    pub switch_character: bool,
+}
+
+// Function to check for key press events (like 'p' for character switching)
+pub fn handle_key_press(ctx: &Context) -> KeyPressState {
+    let mut state = KeyPressState {
+        switch_character: false,
+    };
+    
+    // Check if 'p' was just pressed this frame
+    if ctx.keyboard.is_key_just_pressed(KeyCode::P) {
+        state.switch_character = true;
+    }
+    
+    state
 }
 
 pub fn handle_input(ctx: &Context) -> MovementState {
