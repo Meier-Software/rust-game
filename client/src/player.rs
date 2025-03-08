@@ -160,8 +160,8 @@ impl Player {
 
             // Ensure player stays within world bounds
             const WORLD_SIZE: f32 = 800.0;
-            self.pos.x = self.pos.x.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
-            self.pos.y = self.pos.y.max(0.0).min(WORLD_SIZE - PLAYER_SIZE);
+            self.pos.x = self.pos.x.clamp(0.0, WORLD_SIZE - PLAYER_SIZE);
+            self.pos.y = self.pos.y.clamp(0.0, WORLD_SIZE - PLAYER_SIZE);
         }
     }
 
@@ -224,7 +224,7 @@ impl Player {
             canvas.draw(&hero_asset.img, draw_params);
         } else {
             // Fallback to the old player sprite if the new assets aren't found
-            let fallback_asset = format!("{}", character);
+            let fallback_asset =  character.to_string();
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
                 let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
                     PLAYER_SIZE / player_asset.img.width() as f32,

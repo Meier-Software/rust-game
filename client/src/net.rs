@@ -50,7 +50,7 @@ impl NetClient {
 
     pub fn send_str(&mut self, string: String) -> Result<(), NCError> {
         log::trace!("Sending: {}", string.trim());
-        let a = format!("{}", string);
+        let a = string.to_string();
         match self.tcp.write(a.as_bytes()) {
             Ok(bytes) => {
                 log::trace!("Sent {} bytes to server.", bytes);

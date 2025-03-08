@@ -68,7 +68,7 @@ impl AssetManager {
 
     pub fn debug_print_loaded_assets(&self) {
         log::debug!("=== Loaded Assets ===");
-        for (name, _) in &self.assets {
+        for name in self.assets.keys() {
             log::debug!("Asset: {}", name);
         }
         log::debug!("====================");
