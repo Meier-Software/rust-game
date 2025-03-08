@@ -421,6 +421,8 @@ dependencies = [
  "image",
  "log",
  "protocol",
+ "serde",
+ "serde_json",
  "simple_logger",
 ]
 
