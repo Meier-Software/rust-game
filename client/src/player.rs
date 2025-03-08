@@ -1,5 +1,5 @@
 use ggez::{
-    graphics::{self, DrawParam, Rect},
+    graphics::{self, DrawParam},
     GameResult,
 };
 use protocol::Position;
@@ -11,9 +11,9 @@ use crate::{
 };
 
 // Animation constants
-const SPRITE_SHEET_WIDTH: f32 = 64.0;
-const SPRITE_SHEET_HEIGHT: f32 = 64.0;
-const ANIMATION_FRAME_TIME: f32 = 0.05;
+const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
+const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
+const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
 
 pub struct Player {
     pub name: String,
@@ -22,6 +22,8 @@ pub struct Player {
     pub frame_timer: f32,
     pub direction: Direction,
     pub is_moving: bool,
+    pub idle_timer: f32, // Track how long the player has been idle
+    pub is_in_idle_animation: bool, // Whether the player is in the idle animation
 }
 
 impl Player {
@@ -33,13 +35,23 @@ impl Player {
             frame_timer: 0.0,
             direction: Direction::Down,
             is_moving: false,
+            idle_timer: 0.0,
+            is_in_idle_animation: false,
         }
     }
 
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
         // Update movement state
+        let was_moving = self.is_moving;
         self.is_moving = movement.is_moving;
         self.direction = movement.direction;
+        
+        // Reset idle timer if player starts moving
+        if !was_moving && self.is_moving {
+            self.idle_timer = 0.0;
+            self.is_in_idle_animation = false;
+            println!("Player started moving, resetting idle animation state"); // Debug output
+        }
         
         // Update animation if moving
         if self.is_moving {
@@ -47,7 +59,33 @@ impl Player {
             self.frame_timer += delta_time;
             if self.frame_timer >= ANIMATION_FRAME_TIME {
                 self.frame_timer = 0.0;
-                self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
+                self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Using MAX_FRAMES constant
+            }
+        } else {
+            // When not moving, increment idle timer
+            self.idle_timer += delta_time;
+            
+            // Check if we should switch to idle animation
+            if self.idle_timer >= IDLE_ANIMATION_DELAY && !self.is_in_idle_animation {
+                self.is_in_idle_animation = true;
+                self.current_frame = 0; // Reset frame for idle animation
+                self.frame_timer = 0.0;
+                println!("Entering idle animation"); // Debug output
+            }
+            
+            // If in idle animation, update frames continuously to loop the animation
+            if self.is_in_idle_animation {
+                self.frame_timer += delta_time;
+                if self.frame_timer >= ANIMATION_FRAME_TIME * 3.0 { // Even slower idle/sleep animation
+                    self.frame_timer = 0.0;
+                    let old_frame = self.current_frame;
+                    self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Loop through frames
+                    println!("Idle animation frame changed: {} -> {}", old_frame, self.current_frame); // Debug output
+                }
+            } else {
+                // Reset to first frame when not moving and not in idle animation
+                self.current_frame = 0;
+                self.frame_timer = 0.0;
             }
         }
         
@@ -79,40 +117,59 @@ impl Player {
     }
 
     pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
-        // Get player sprite
-        if let Some(player_asset) = asset_manager.get_asset("player") {
-            // Calculate the source rectangle for the current animation frame
-            let direction_offset = match self.direction {
-                Direction::Up => 0,
-                Direction::Left => 1,
-                Direction::Down => 2,
-                Direction::Right => 3,
-            };
+        // Get the appropriate sprite based on direction and movement state
+        let asset_name = if self.is_moving {
+            // For moving animations, use the run animations with the current frame
+            let frame = (self.current_frame % MAX_FRAMES) + 1; // Frames are 1-indexed in our asset names
+            match self.direction {
+                Direction::Up => format!("hero_run_up_{}", frame),
+                Direction::Left => format!("hero_run_right_{}", frame), // Use right sprites but flip them
+                Direction::Down => format!("hero_run_down_{}", frame),
+                Direction::Right => format!("hero_run_right_{}", frame),
+            }
+        } else if self.is_in_idle_animation {
+            // For idle animation, use the idle animation frames and loop through them
+            let frame = (self.current_frame % MAX_FRAMES) + 1;
+            format!("hero_idle_{}", frame)
+        } else {
+            // For regular idle state, use the idle sprites
+            match self.direction {
+                Direction::Up => "hero_idle_up",
+                Direction::Left => "hero_idle_right", // Use right idle but flip it
+                Direction::Down => "hero_idle_down",
+                Direction::Right => "hero_idle_right",
+            }.to_string()
+        };
 
-            // Each row in the sprite sheet represents a direction
-            // Each column represents an animation frame
-            let frame_to_use = if self.is_moving {
-                self.current_frame
-            } else {
-                0
-            };
-            let src_x = (frame_to_use as f32) * SPRITE_SHEET_WIDTH;
-            let src_y = (direction_offset as f32) * SPRITE_SHEET_HEIGHT;
-
-            let src_rect = Rect::new(
-                src_x / player_asset.img.width() as f32,
-                src_y / player_asset.img.height() as f32,
-                SPRITE_SHEET_WIDTH / player_asset.img.width() as f32,
-                SPRITE_SHEET_HEIGHT / player_asset.img.height() as f32,
-            );
-
-            // Draw the player sprite at the correct position
-            let draw_params = DrawParam::default()
+        // Draw the appropriate sprite
+        if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
+            // Determine if we need to flip the sprite horizontally (for left direction)
+            let flip_x = self.direction == Direction::Left;
+            
+            // Draw the hero sprite at the correct position
+            let mut draw_params = DrawParam::default()
                 .dest([self.pos.x, self.pos.y])
-                .scale([PLAYER_SIZE / SPRITE_SHEET_WIDTH, PLAYER_SIZE / SPRITE_SHEET_HEIGHT])
-                .src(src_rect);
+                .scale([
+                    if flip_x { -1.0 } else { 1.0 } * PLAYER_SIZE / hero_asset.img.width() as f32, 
+                    PLAYER_SIZE / hero_asset.img.height() as f32
+                ]);
+                
+            // If flipping, adjust the destination to account for the flipped sprite
+            if flip_x {
+                draw_params = draw_params.dest([self.pos.x + PLAYER_SIZE, self.pos.y]);
+            }
 
-            canvas.draw(&player_asset.img, draw_params);
+            canvas.draw(&hero_asset.img, draw_params);
+        } else {
+            // Fallback to the old player sprite if the new assets aren't found
+            if let Some(player_asset) = asset_manager.get_asset("player") {
+                let draw_params = DrawParam::default()
+                    .dest([self.pos.x, self.pos.y])
+                    .scale([PLAYER_SIZE / player_asset.img.width() as f32, 
+                            PLAYER_SIZE / player_asset.img.height() as f32]);
+
+                canvas.draw(&player_asset.img, draw_params);
+            }
         }
         
         Ok(())
