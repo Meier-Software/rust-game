@@ -51,15 +51,49 @@ impl GameState {
     pub fn new_offline(ctx: &mut Context) -> Self {
         Self::new_with_mode(ctx, true)
     }
+    
+    pub fn new_with_map(ctx: &mut Context, map: Map) -> Self {
+        Self::new_with_mode_and_map(ctx, false, map)
+    }
+    
+    pub fn new_offline_with_map(ctx: &mut Context, map: Map) -> Self {
+        Self::new_with_mode_and_map(ctx, true, map)
+    }
 
     fn new_with_mode(ctx: &mut Context, offline_mode: bool) -> Self {
+        // Create a default map
+        let map = Map::new();
+        Self::new_with_mode_and_map(ctx, offline_mode, map)
+    }
+    
+    fn new_with_mode_and_map(ctx: &mut Context, offline_mode: bool, map: Map) -> Self {
+        // Create network client based on mode
         let mut nc = if offline_mode {
             NetClient::new_offline()
         } else {
             NetClient::new()
         };
-        
+
+        // Create asset manager and load assets
         let mut asset_manager = AssetManager::new();
+
+        // Load map assets
+        asset_manager
+            .load_assets(
+                ctx,
+                &[
+                    ("floor", "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"),
+                    ("wall_middle", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"),
+                    ("wall2", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_left.png"),
+                    ("wall3", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_right.png"),
+                    ("wall4", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Top/wall_top_mid.png"),
+                    ("wall5", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_left.png"),
+                    ("wall6", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_rigth.png"),
+                    ("skull", "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png"),
+                    ("door", "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png"),
+                ],
+            )
+            .expect("Failed to load map assets");
 
         // Load assets for all character types
         let char_asset_names = vec!["Archer", "Knight", "Elf", "Lizard", "Wizzard"];
@@ -68,78 +102,23 @@ impl GameState {
             Self::load_character_assets(ctx, &mut asset_manager, char_asset_name).expect(&expect);
         }
 
-        // Load wall assets and other assets
-        let wall_assets = [
-            // Wall assets - using the available wall assets
-            (
-                "wall_middle",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png",
-            ), // Default wall
-            (
-                "wall2",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_left.png",
-            ), // Wall with index 2
-            (
-                "wall3",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_right.png",
-            ), // Wall with index 3
-            (
-                "wall4",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Top/wall_top_mid.png",
-            ),
-            (
-                "wall5",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_left.png",
-            ),
-            (
-                "wall6",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_rigth.png",
-            ),
-            // Floor asset
-            (
-                "floor",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png",
-            ),
-            // Decoration assets
-            (
-                "skull",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png",
-            ),
-            // Door asset
-            (
-                "door",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png",
-            ),
-        ];
-
-        asset_manager
-            .load_assets(ctx, &wall_assets)
-            .expect("Failed to load wall assets");
-
         asset_manager.debug_print_loaded_assets();
 
-        // Create the map
-        let map = Map::new();
-
-        // Start the player at a valid position in the map (e.g., in an open area)
-        // Using grid coordinates 1,1 which should be an open space in our map
+        // Create player at starting position
         let start_pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
         let players = Players::new("Player".to_string(), start_pos);
 
-        let stage = if nc.is_offline() {
-            Stage::Offline
-        } else {
-            // Send registration/login command
-            // nc.send_str("register xyz 123\r\n".to_string());
-            let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
-            let _ = nc.send(event);
-            // Wait a bit for server response
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            Stage::PreAuth
-        };
-
         Self {
-            stage,
+            stage: if offline_mode { 
+                Stage::Offline 
+            } else { 
+                // Send registration/login command if online
+                let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+                let _ = nc.send(event);
+                // Wait a bit for server response
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                Stage::PreAuth 
+            },
             nc,
             asset_manager,
             players,

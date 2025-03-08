@@ -1,9 +1,13 @@
 use crate::assets::AssetManager;
 use ggez::{Context, GameResult, graphics};
 use protocol::Facing;
+use serde::{Serialize, Deserialize};
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 // Wall types for different wall appearances
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum TileType {
     Empty,
     Wall,
@@ -17,6 +21,7 @@ pub enum TileType {
 }
 
 // Define a room with its own grid layout
+#[derive(Serialize, Deserialize)]
 pub struct Room {
     grid: Vec<Vec<TileType>>,
     width: usize,
@@ -26,6 +31,7 @@ pub struct Room {
 }
 
 // Define the map as a collection of rooms with doors connecting them
+#[derive(Serialize, Deserialize)]
 pub struct Map {
     rooms: Vec<Room>,
     pub current_room: usize,
@@ -71,8 +77,36 @@ impl Room {
 
 impl Map {
     pub fn new() -> Self {
-        // First room layout
-        let room1_layout = vec![
+        // Try to load the default map from JSON
+        let default_paths = [
+            "client/assets/default_map.json",
+            "assets/default_map.json",
+        ];
+        
+        for path in default_paths {
+            if Path::new(path).exists() {
+                match Self::from_json(path) {
+                    Ok(map) => {
+                        println!("Loaded default map from {}", path);
+                        return map;
+                    },
+                    Err(e) => {
+                        println!("Failed to load default map from {}: {}", path, e);
+                        // Continue to try the next path
+                    }
+                }
+            }
+        }
+        
+        // If no default map is found, create a simple fallback map
+        println!("No default map found, creating a simple fallback map");
+        Self::create_fallback_map()
+    }
+    
+    // Create a simple fallback map if no default map is found
+    fn create_fallback_map() -> Self {
+        // Simple room layout - just a box with empty space
+        let room_layout = vec![
             vec![2, 5, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
@@ -83,39 +117,22 @@ impl Map {
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 3], // Door at position (7, 10)
-            vec![2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
-        ];
-
-        // Second room layout
-        let room2_layout = vec![
-            vec![2, 5, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 3], // Door at position (7, 1)
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
         ];
-
-        // Create rooms
-        let room1 = Room::new(room1_layout);
-        let room2 = Room::new(room2_layout);
-
-        // Define doors and their destinations
-        // Format: (x, y, destination_room_index)
-        let doors = vec![
-            (7, 10, 1), // Door in room 0 (first room) at position (7, 10) leads to room 1
-            (7, 1, 0),  // Door in room 1 (second room) at position (7, 1) leads to room 0
-        ];
-
+        
+        Self::from_layouts(vec![room_layout], vec![])
+    }
+    
+    // Create a map from custom room layouts and door connections
+    pub fn from_layouts(room_layouts: Vec<Vec<Vec<u8>>>, doors: Vec<(usize, usize, usize)>) -> Self {
+        // Create rooms from layouts
+        let rooms = room_layouts.into_iter()
+            .map(Room::new)
+            .collect();
+            
         Self {
-            rooms: vec![room1, room2],
+            rooms,
             current_room: 0,
             doors,
         }
@@ -333,5 +350,32 @@ impl Map {
         }
 
         None
+    }
+
+    // Convert the map to JSON and save it to a file
+    pub fn to_json(&self, path: &str) -> Result<(), String> {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| format!("Failed to serialize map to JSON: {}", e))?;
+        
+        let mut file = File::create(path)
+            .map_err(|e| format!("Failed to create file {}: {}", path, e))?;
+        
+        file.write_all(json.as_bytes())
+            .map_err(|e| format!("Failed to write to file {}: {}", path, e))?;
+        
+        println!("Map saved to {}", path);
+        Ok(())
+    }
+
+    // Load a map from a JSON file
+    pub fn from_json(path: &str) -> Result<Self, String> {
+        let file = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read file {}: {}", path, e))?;
+        
+        let map: Map = serde_json::from_str(&file)
+            .map_err(|e| format!("Failed to deserialize map from JSON: {}", e))?;
+        
+        println!("Map loaded from {}", path);
+        Ok(map)
     }
 }
