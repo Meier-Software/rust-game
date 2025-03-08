@@ -9,7 +9,12 @@ defmodule Player do
     Logger.info("New player-(#{username}) spawned for client-(#{inspect(client_pid)})")
 
     stats = %{:hp => 10, :mp => 20}
-    info = %{:x => 0.0, :y => 0.0, :username => username}
+    info = %{
+      :x => 0.0,
+      :y => 0.0,
+      :facing => "North",
+      :username => username
+    }
 
     send(:zone_manager, {:player_join, username, self()})
     loop_player(client_pid, stats, info)
@@ -30,6 +35,13 @@ defmodule Player do
 
       {:stats, pid} ->
         send(pid, {:stats, stats, info})
+        loop_player(client_pid, stats, info)
+
+
+      {:facing, dir, pid} ->
+        send(pid, {:faced, dir})
+        info = Map.put(info, :facing, dir)
+
         loop_player(client_pid, stats, info)
 
       {:move, x, y, pid} ->
@@ -55,6 +67,10 @@ defmodule Player do
 
         Logger.info("Client Error #{inspect(err)} from #{username}.")
         loop_player(client_pid, stats, info)
+
+      _ ->
+        loop_player(client_pid, stats, info)
+
     after
       0 ->
         loop_player(client_pid, stats, info)

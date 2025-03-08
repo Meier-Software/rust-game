@@ -2,7 +2,7 @@ defmodule Client.Authed do
   require Logger
 
   def start(client_socket, username) do
-    Logger.info("New player #{username}")
+    Logger.info("New player-(#{username})")
     client_pid = self()
 
     # TODO: Only actually go through this when auth starts
@@ -22,10 +22,10 @@ defmodule Client.Authed do
         Client.repeat_start(client_socket)
 
       ["quit"] ->
-        Logger.info("Client logged out.")
+        Logger.info("Client quit.")
 
         :gen_tcp.close(client_socket)
-        Process.exit(self(), "Logged out")
+        Process.exit(self(), "Client quit.")
 
       ["stats"] ->
         send(player_pid, {:stats, self()})
@@ -35,7 +35,6 @@ defmodule Client.Authed do
         end
 
       ["heal", value] ->
-        # Logger.info("Alerting player to heal.")
         send(player_pid, {:heal, value, self()})
         "Attempting to heal for #{value}."
 
@@ -46,8 +45,10 @@ defmodule Client.Authed do
 
       ["move", x, y] ->
         send(player_pid, {:move, x, y, self()})
-        # Logger.info("Moving player.")
         "Moved x#{inspect(x)} y#{inspect(y)}"
+
+      ["face", dir] ->
+        "Facing " <> dir
 
       ["update", "server"] ->
         Logger.info("Recompiling server.")
