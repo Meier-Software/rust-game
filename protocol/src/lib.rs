@@ -14,10 +14,10 @@ pub enum Facing {
     South,
     West,
 }
-impl std::fmt::Display for Facing{
+impl std::fmt::Display for Facing {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Facing::*;
-        let a = match self{
+        let a = match self {
             North => "North".to_string(),
             East => "Eorth".to_string(),
             South => "Sorth".to_string(),
@@ -26,8 +26,6 @@ impl std::fmt::Display for Facing{
         write!(f, "{}", a)
     }
 }
-
-
 
 pub enum ServerToClient {
     EntityMoved(Position),

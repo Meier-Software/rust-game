@@ -319,9 +319,10 @@ impl Map {
                             East
                         } else if *other_door_x == self.rooms[self.current_room].width - 2 {
                             // Door is at the right of the room, move player left
-West                        } else {
+                            West
+                        } else {
                             // Default direction if door position is ambiguous
-    South                        
+                            South
                         };
 
                         // Return the position of the door in the new room and the direction to offset

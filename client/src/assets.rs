@@ -3,13 +3,12 @@ use ggez::{Context, GameResult};
 use std::collections::HashMap;
 
 pub struct Asset {
-    pub name: String,
     pub img: Image,
 }
 
 impl Asset {
-    pub fn new(name: String, img: Image) -> Self {
-        Self { name, img }
+    pub fn new(img: Image) -> Self {
+        Self { img }
     }
 }
 
@@ -43,7 +42,7 @@ impl AssetManager {
             }
         };
 
-        let asset = Asset::new(name.to_string(), img);
+        let asset = Asset::new(img);
         self.assets.insert(name.to_string(), asset);
         Ok(())
     }
@@ -62,6 +61,7 @@ impl AssetManager {
         self.assets.get(name)
     }
 
+    #[allow(unused)]
     pub fn has_asset(&self, name: &str) -> bool {
         self.assets.contains_key(name)
     }

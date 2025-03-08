@@ -1,10 +1,11 @@
 use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
-use protocol::Position;
 use protocol::Facing::*;
+use protocol::Position;
 
 // Game constants
 pub const MOVEMENT_SPEED: f32 = 1.0;
+#[allow(unused)]
 pub const WORLD_SIZE: f32 = 800.0;
 pub const PLAYER_SIZE: f32 = 16.0;
 
@@ -45,7 +46,7 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Down) || ctx.keyboard.is_key_pressed(KeyCode::S) {
         dy += MOVEMENT_SPEED;
-        direction =South;
+        direction = South;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Left) || ctx.keyboard.is_key_pressed(KeyCode::A) {
         dx -= MOVEMENT_SPEED;

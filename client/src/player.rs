@@ -2,12 +2,12 @@ use ggez::{
     GameResult,
     graphics::{self, DrawParam},
 };
-use protocol::Position;
 use protocol::Facing;
+use protocol::Position;
 
 use crate::{
     assets::AssetManager,
-    input::{ MovementState, PLAYER_SIZE},
+    input::{MovementState, PLAYER_SIZE},
     map::Map,
 };
 // Animation constants
@@ -52,6 +52,7 @@ impl CharacterType {
 }
 
 pub struct Player {
+    #[allow(unused)]
     pub name: String,
     pub pos: Position,
     pub current_frame: usize,
@@ -171,7 +172,7 @@ impl Player {
     ) -> GameResult<()> {
         // Get the character folder name
         let character = self.character_type.folder_name();
-        let gender = "M"; // Using male characters for now
+        let _gender = "M"; // Using male characters for now
 
         // Get the appropriate sprite based on direction, movement state, and character type
         let asset_name = if self.is_moving {

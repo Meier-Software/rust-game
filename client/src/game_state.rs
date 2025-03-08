@@ -15,11 +15,15 @@ use crate::{
 // Constants
 pub const GRID_SIZE: f32 = 16.0;
 pub const CAMERA_ZOOM: f32 = 4.0;
+#[allow(unused)]
 pub const DIALOGUE_PADDING: f32 = 20.0;
+#[allow(unused)]
 pub const DIALOGUE_HEIGHT: f32 = 150.0;
 
 pub enum Stage {
     PreAuth,
+
+    #[allow(unused)]
     InMenu,
     InGame,
 }
@@ -279,7 +283,9 @@ impl GameState {
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
                 }
-                SendError => {}
+                SendError => {
+                    log::error!("Some random send error???")
+                }
             },
         }
     }
