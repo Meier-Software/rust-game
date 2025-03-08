@@ -11,6 +11,7 @@ pub enum TileType {
     Wall4,  // Bottom wall
     Wall5, //Top Left
     Wall6, //Top Right
+    Skull, // Skull decoration on floor
 }
 
 // Define the map as a 2D grid with different tile types
@@ -18,6 +19,8 @@ pub struct Map {
     grid: Vec<Vec<TileType>>,
     width: usize,
     height: usize,
+    // Store decoration positions separately to draw them on top of floor tiles
+    decorations: Vec<(usize, usize, TileType)>,
 }
 
 impl Map {
@@ -27,14 +30,14 @@ impl Map {
         let basic_grid = vec![
             vec![2, 5, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 3],
-            vec![2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
         ];
@@ -60,10 +63,14 @@ impl Map {
             }
         }
 
+        // Create decorations list with a skull at position (5, 5)
+        let decorations = vec![(5, 5, TileType::Skull)];
+
         Self {
             grid,
             width,
             height,
+            decorations,
         }
     }
 
@@ -195,10 +202,29 @@ impl Map {
                                     .dest(dest)
                             );
                         }
-                    }
+                    },
+                    TileType::Skull => {}, // Skulls are drawn separately
                 }
             }
         }
+
+        // Draw decorations on top of floor tiles
+        for (x, y, tile_type) in &self.decorations {
+            match tile_type {
+                TileType::Skull => {
+                    if let Some(skull_asset) = asset_manager.get_asset("skull") {
+                        let dest = [*x as f32 * grid_size, *y as f32 * grid_size];
+                        canvas.draw(
+                            &skull_asset.img,
+                            graphics::DrawParam::default()
+                                .dest(dest)
+                        );
+                    }
+                },
+                _ => {}, // Skip other decoration types for now
+            }
+        }
+
         Ok(())
     }
 
@@ -227,7 +253,7 @@ impl Map {
             
             // If this corner is in any type of wall, position is invalid
             match self.grid[grid_y][grid_x] {
-                TileType::Empty => {}, // Empty space is valid
+                TileType::Empty | TileType::Skull => {}, // Empty space and decorations are valid to walk on
                 TileType::Wall | TileType::Wall2 | TileType::Wall3 | TileType::Wall4 | TileType::Wall5 | TileType::Wall6 => return false, // Any wall type is invalid
             }
         }

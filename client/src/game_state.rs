@@ -55,6 +55,8 @@ impl GameState {
             ("wall6", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_rigth.png"),
             // Floor asset
             ("floor", "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"),
+            // Decoration assets
+            ("skull", "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png"),
         ];
         
         if let Err(e) = asset_manager.load_assets(ctx, &assets) {
