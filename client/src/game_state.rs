@@ -57,6 +57,8 @@ impl GameState {
             ("floor", "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"),
             // Decoration assets
             ("skull", "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png"),
+            // Door asset
+            ("door", "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png"),
         ];
         
         if let Err(e) = asset_manager.load_assets(ctx, &assets) {
@@ -135,6 +137,41 @@ impl GameState {
         // Update player state
         self.players.update(&movement, &self.map, GRID_SIZE, ctx.time.delta().as_secs_f32());
         
+        // Check for door transitions
+        let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2.0;
+        let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2.0;
+        
+        if let Some((door_x, door_y, direction)) = self.map.check_door_transition(player_center_x, player_center_y, GRID_SIZE) {
+            // Calculate base position at the door
+            let base_x = (door_x as f32 * GRID_SIZE);
+            let base_y = (door_y as f32 * GRID_SIZE);
+            
+            // Offset the player from the door based on the direction
+            // This prevents the player from immediately triggering the door again
+            match direction {
+                input::Direction::Up => {
+                    self.players.self_player.pos.x = base_x;
+                    self.players.self_player.pos.y = base_y - GRID_SIZE;
+                    self.players.self_player.direction = input::Direction::Up;
+                },
+                input::Direction::Down => {
+                    self.players.self_player.pos.x = base_x;
+                    self.players.self_player.pos.y = base_y + GRID_SIZE;
+                    self.players.self_player.direction = input::Direction::Down;
+                },
+                input::Direction::Left => {
+                    self.players.self_player.pos.x = base_x - GRID_SIZE;
+                    self.players.self_player.pos.y = base_y;
+                    self.players.self_player.direction = input::Direction::Left;
+                },
+                input::Direction::Right => {
+                    self.players.self_player.pos.x = base_x + GRID_SIZE;
+                    self.players.self_player.pos.y = base_y;
+                    self.players.self_player.direction = input::Direction::Right;
+                },
+            }
+        }
+        
         // Send movement to server
         input::send_movement_to_server(&mut self.nc, &movement);
     }
@@ -197,9 +234,10 @@ impl GameState {
 
         // Draw position info for debugging - fixed to the camera view
         let pos_text = Text::new(format!(
-            "Pos: ({:.1}, {:.1})", 
+            "Pos: ({:.1}, {:.1}) - Room: {}", 
             self.players.self_player.pos.x, 
-            self.players.self_player.pos.y
+            self.players.self_player.pos.y,
+            self.map.current_room
         ));
         
         // Draw UI elements in screen coordinates by adding the camera position
