@@ -22,6 +22,7 @@ pub fn main() -> GameResult {
     }
 
     simp_log.init().unwrap();
+    log::info!("TESTING LOGGER.");
 
     let resource_dir = PathBuf::from("./client/assets");
     let cb = ggez::ContextBuilder::new("simple_game", "ggez")
