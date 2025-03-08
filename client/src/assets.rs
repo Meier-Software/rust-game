@@ -1,5 +1,5 @@
-use ggez::{Context, GameResult};
 use ggez::graphics::Image;
+use ggez::{Context, GameResult};
 use std::collections::HashMap;
 
 pub struct Asset {
@@ -34,12 +34,15 @@ impl AssetManager {
                 } else {
                     path
                 };
-                
-                println!("Failed to load asset from {}: {}. Trying {}", path, e, alt_path);
+
+                println!(
+                    "Failed to load asset from {}: {}. Trying {}",
+                    path, e, alt_path
+                );
                 Image::from_path(ctx, alt_path)?
             }
         };
-        
+
         let asset = Asset::new(name.to_string(), img);
         self.assets.insert(name.to_string(), asset);
         Ok(())
@@ -58,7 +61,7 @@ impl AssetManager {
     pub fn get_asset(&self, name: &str) -> Option<&Asset> {
         self.assets.get(name)
     }
-    
+
     pub fn has_asset(&self, name: &str) -> bool {
         self.assets.contains_key(name)
     }

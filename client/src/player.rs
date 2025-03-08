@@ -1,6 +1,6 @@
 use ggez::{
-    graphics::{self, DrawParam, Rect},
     GameResult,
+    graphics::{self, DrawParam, Rect},
 };
 use protocol::Position;
 
@@ -40,7 +40,7 @@ impl Player {
         // Update movement state
         self.is_moving = movement.is_moving;
         self.direction = movement.direction;
-        
+
         // Update animation if moving
         if self.is_moving {
             // Update animation frame
@@ -50,22 +50,22 @@ impl Player {
                 self.current_frame = (self.current_frame + 1) % 9; // Assuming 9 frames per direction
             }
         }
-        
+
         // Update position
         if movement.is_moving {
             // Calculate new position
             let new_x = self.pos.x + movement.dx;
             let new_y = self.pos.y + movement.dy;
-            
+
             // Calculate the center of the player sprite for collision detection
             let center_x = new_x + PLAYER_SIZE / 2.0;
             let center_y = new_y + PLAYER_SIZE / 2.0;
-            
+
             // Check horizontal movement
             if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2.0, grid_size) {
                 self.pos.x = new_x;
             }
-            
+
             // Check vertical movement
             if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2.0, center_y, grid_size) {
                 self.pos.y = new_y;
@@ -78,7 +78,11 @@ impl Player {
         }
     }
 
-    pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
+    pub fn draw(
+        &self,
+        canvas: &mut graphics::Canvas,
+        asset_manager: &AssetManager,
+    ) -> GameResult<()> {
         // Get player sprite
         if let Some(player_asset) = asset_manager.get_asset("player") {
             // Calculate the source rectangle for the current animation frame
@@ -109,12 +113,15 @@ impl Player {
             // Draw the player sprite at the correct position
             let draw_params = DrawParam::default()
                 .dest([self.pos.x, self.pos.y])
-                .scale([PLAYER_SIZE / SPRITE_SHEET_WIDTH, PLAYER_SIZE / SPRITE_SHEET_HEIGHT])
+                .scale([
+                    PLAYER_SIZE / SPRITE_SHEET_WIDTH,
+                    PLAYER_SIZE / SPRITE_SHEET_HEIGHT,
+                ])
                 .src(src_rect);
 
             canvas.draw(&player_asset.img, draw_params);
         }
-        
+
         Ok(())
     }
 }
@@ -131,21 +138,25 @@ impl Players {
             other_players: Vec::new(),
         }
     }
-    
+
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
-        self.self_player.update(movement, map, grid_size, delta_time);
+        self.self_player
+            .update(movement, map, grid_size, delta_time);
     }
-    
-    pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
+
+    pub fn draw(
+        &self,
+        canvas: &mut graphics::Canvas,
+        asset_manager: &AssetManager,
+    ) -> GameResult<()> {
         // Draw the main player
         self.self_player.draw(canvas, asset_manager)?;
-        
+
         // Draw other players
         for player in &self.other_players {
             player.draw(canvas, asset_manager)?;
         }
-        
+
         Ok(())
     }
 }
-

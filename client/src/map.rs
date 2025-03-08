@@ -1,15 +1,15 @@
-use ggez::{Context, GameResult, graphics};
 use crate::assets::AssetManager;
 use crate::input::Direction;
+use ggez::{Context, GameResult, graphics};
 
 // Wall types for different wall appearances
 #[derive(Clone, Copy, PartialEq)]
 pub enum TileType {
     Empty,
     Wall,
-    Wall2,  // New wall type for wall with index 2
-    Wall3,  // New wall type for wall with index 3
-    Wall4,  // Bottom wall
+    Wall2, // New wall type for wall with index 2
+    Wall3, // New wall type for wall with index 3
+    Wall4, // Bottom wall
     Wall5, //Top Left
     Wall6, //Top Right
     Skull, // Skull decoration on floor
@@ -40,7 +40,7 @@ impl Room {
 
         // Convert the basic grid to a grid with proper wall types
         let mut grid = vec![vec![TileType::Empty; width]; height];
-        
+
         for y in 0..height {
             for x in 0..width {
                 grid[y][x] = match layout[y][x] {
@@ -121,9 +121,15 @@ impl Map {
         }
     }
 
-    pub fn draw(&self, _ctx: &Context, canvas: &mut graphics::Canvas, asset_manager: &AssetManager, grid_size: f32) -> GameResult<()> {
+    pub fn draw(
+        &self,
+        _ctx: &Context,
+        canvas: &mut graphics::Canvas,
+        asset_manager: &AssetManager,
+        grid_size: f32,
+    ) -> GameResult<()> {
         let room = &self.rooms[self.current_room];
-        
+
         // First draw floor tiles for all cells
         if let Some(floor_asset) = asset_manager.get_asset("floor") {
             for y in 0..room.height {
@@ -131,139 +137,92 @@ impl Map {
                     if room.grid[y][x] == TileType::Empty || room.grid[y][x] == TileType::Door {
                         // Draw floor at this position (doors have floor underneath)
                         let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                        canvas.draw(
-                            &floor_asset.img,
-                            graphics::DrawParam::default()
-                                .dest(dest)
-                        );
+                        canvas.draw(&floor_asset.img, graphics::DrawParam::default().dest(dest));
                     }
                 }
             }
         }
-        
+
         // Then draw wall tiles and doors on top
         for y in 0..room.height {
             for x in 0..room.width {
                 match room.grid[y][x] {
-                    TileType::Empty => {}, // Skip empty tiles
+                    TileType::Empty => {} // Skip empty tiles
                     TileType::Wall => {
                         // Use wall_middle for regular walls
                         if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Wall2 => {
                         // Use wall2 for the second wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall2") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &default_wall.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas
+                                .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Wall3 => {
                         // Use wall3 for the third wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall3") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &default_wall.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas
+                                .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Wall4 => {
                         // Use wall4 for the bottom wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall4") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &default_wall.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas
+                                .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Wall5 => {
                         // Use wall5 for the top left corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall5") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &default_wall.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas
+                                .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Wall6 => {
                         // Use wall6 for the top right corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall6") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &wall_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &default_wall.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas
+                                .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
+                    }
                     TileType::Door => {
                         // Draw the door
                         if let Some(door_asset) = asset_manager.get_asset("door") {
                             let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                            canvas.draw(
-                                &door_asset.img,
-                                graphics::DrawParam::default()
-                                    .dest(dest)
-                            );
+                            canvas.draw(&door_asset.img, graphics::DrawParam::default().dest(dest));
                         }
-                    },
-                    TileType::Skull => {}, // Skulls are drawn separately
+                    }
+                    TileType::Skull => {} // Skulls are drawn separately
                 }
             }
         }
@@ -274,14 +233,10 @@ impl Map {
                 TileType::Skull => {
                     if let Some(skull_asset) = asset_manager.get_asset("skull") {
                         let dest = [*x as f32 * grid_size, *y as f32 * grid_size];
-                        canvas.draw(
-                            &skull_asset.img,
-                            graphics::DrawParam::default()
-                                .dest(dest)
-                        );
+                        canvas.draw(&skull_asset.img, graphics::DrawParam::default().dest(dest));
                     }
-                },
-                _ => {}, // Skip other decoration types for now
+                }
+                _ => {} // Skip other decoration types for now
             }
         }
 
@@ -291,10 +246,10 @@ impl Map {
     // Check if a position is valid (not a wall)
     pub fn is_valid_position(&self, x: f32, y: f32, grid_size: f32) -> bool {
         let room = &self.rooms[self.current_room];
-        
+
         // Calculate the player's hitbox corners with a slightly smaller hitbox for better collision
         let player_half_size = crate::input::PLAYER_SIZE / 2.5; // Reduced from 2.0 to 2.5 for tighter collision
-        
+
         // Check all four corners of the player's hitbox
         let corners = [
             (x - player_half_size, y - player_half_size), // Top-left
@@ -302,41 +257,51 @@ impl Map {
             (x - player_half_size, y + player_half_size), // Bottom-left
             (x + player_half_size, y + player_half_size), // Bottom-right
         ];
-        
+
         // Check if any corner is in a wall
         for (corner_x, corner_y) in corners {
             let grid_x = (corner_x / grid_size) as usize;
             let grid_y = (corner_y / grid_size) as usize;
-            
+
             // Check bounds
             if grid_x >= room.width || grid_y >= room.height {
                 return false;
             }
-            
+
             // If this corner is in any type of wall, position is invalid
             match room.grid[grid_y][grid_x] {
-                TileType::Empty | TileType::Skull | TileType::Door => {}, // Empty space, decorations, and doors are valid to walk on
-                TileType::Wall | TileType::Wall2 | TileType::Wall3 | TileType::Wall4 | TileType::Wall5 | TileType::Wall6 => return false, // Any wall type is invalid
+                TileType::Empty | TileType::Skull | TileType::Door => {} // Empty space, decorations, and doors are valid to walk on
+                TileType::Wall
+                | TileType::Wall2
+                | TileType::Wall3
+                | TileType::Wall4
+                | TileType::Wall5
+                | TileType::Wall6 => return false, // Any wall type is invalid
             }
         }
-        
+
         // All corners are in valid positions
         true
     }
 
     // Check if player is on a door tile and handle room transition
-    pub fn check_door_transition(&mut self, x: f32, y: f32, grid_size: f32) -> Option<(usize, usize, Direction)> {
+    pub fn check_door_transition(
+        &mut self,
+        x: f32,
+        y: f32,
+        grid_size: f32,
+    ) -> Option<(usize, usize, Direction)> {
         // Calculate the grid position of the player's center
         let center_x = (x / grid_size) as usize;
         let center_y = (y / grid_size) as usize;
-        
+
         // Check if the player is standing on a door
         for (door_x, door_y, dest_room) in &self.doors {
             if *door_x == center_x && *door_y == center_y && self.current_room != *dest_room {
                 // Transition to the destination room
                 let prev_room = self.current_room;
                 self.current_room = *dest_room;
-                
+
                 // Find the corresponding door in the destination room
                 for (other_door_x, other_door_y, other_dest_room) in &self.doors {
                     if *other_dest_room == prev_room && *dest_room == self.current_room {
@@ -358,14 +323,14 @@ impl Map {
                             // Default direction if door position is ambiguous
                             Direction::Down
                         };
-                        
+
                         // Return the position of the door in the new room and the direction to offset
                         return Some((*other_door_x, *other_door_y, direction));
                     }
                 }
             }
         }
-        
+
         None
     }
 }
