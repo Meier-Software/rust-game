@@ -11,7 +11,18 @@ mod game_state;
 
 use game_state::GameState;
 
+use simple_logger::SimpleLogger;
+
 pub fn main() -> GameResult {
+    let mut simp_log = SimpleLogger::new();
+    let ignored_modules = vec!["gilrs_core", "gilrs", "naga", "ggez", "wgpu_hal", "wgpu_core", "winit", "mio",];
+
+    for module in ignored_modules{
+        simp_log = simp_log.with_module_level(module, log::LevelFilter::Warn);
+    }
+
+    simp_log.init().unwrap();
+
     let resource_dir = PathBuf::from("./client/assets");
     let cb = ggez::ContextBuilder::new("simple_game", "ggez")
         .window_setup(ggez::conf::WindowSetup::default().title("Simple 2D Game"))
