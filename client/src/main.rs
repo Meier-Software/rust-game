@@ -1,17 +1,15 @@
 // main.rs - Entry point for the game client
+use game_state::GameState;
 use ggez::{Context, GameResult, event};
-use std::path::PathBuf;
+use simple_logger::SimpleLogger;
 
 mod assets;
+mod filter;
 mod game_state;
 mod input;
 mod map;
 mod net;
 mod player;
-
-use game_state::GameState;
-
-use simple_logger::SimpleLogger;
 
 pub fn main() -> GameResult {
     let mut simp_log = SimpleLogger::new();
@@ -30,16 +28,19 @@ pub fn main() -> GameResult {
         simp_log = simp_log.with_module_level(module, log::LevelFilter::Warn);
     }
 
-    simp_log.init().unwrap();
-    log::info!("TESTING LOGGER.");
+    simp_log.with_level(log::LevelFilter::Info).init().unwrap();
+
+    let a = filter::Filters::new();
+    let _ = a.filter_to_wimble_text("abc shit".to_string());
 
     // Use the correct resource path based on the current directory
     let resource_dir = if std::path::Path::new("./assets").exists() {
-        PathBuf::from("./assets")
+        log::warn!("Run the client in the proper directory please :)");
+        "./assets"
     } else {
-        PathBuf::from("./client/assets")
+        "./client/assets"
     };
-    
+
     let cb = ggez::ContextBuilder::new("simple_game", "ggez")
         .window_setup(ggez::conf::WindowSetup::default().title("Simple 2D Game"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))

@@ -2,14 +2,14 @@ use ggez::{
     Context, GameResult,
     graphics::{self, Color, DrawParam, Rect, Text},
 };
-use protocol::Position;
+use protocol::{ClientToServer, Position};
 
 use crate::{
     assets::AssetManager,
     input::{self, handle_key_press},
     map::Map,
     net::NetClient,
-    player::{Players, CharacterType},
+    player::Players,
 };
 
 // Constants
@@ -44,12 +44,12 @@ impl GameState {
         let mut asset_manager = AssetManager::new();
 
         // Load assets for all character types
-        Self::load_character_assets(ctx, &mut asset_manager, "Knight").expect("Failed to load Knight assets");
-        Self::load_character_assets(ctx, &mut asset_manager, "Archer").expect("Failed to load Archer assets");
-        Self::load_character_assets(ctx, &mut asset_manager, "Elf").expect("Failed to load Elf assets");
-        Self::load_character_assets(ctx, &mut asset_manager, "Lizard").expect("Failed to load Lizard assets");
-        Self::load_character_assets(ctx, &mut asset_manager, "Wizzard").expect("Failed to load Wizard assets");
-        
+        let char_asset_names = vec!["Archer", "Knight", "Elf", "Lizard", "Wizzard"];
+        for char_asset_name in char_asset_names {
+            let expect = format!("Failed to load {} assets", char_asset_name);
+            Self::load_character_assets(ctx, &mut asset_manager, char_asset_name).expect(&expect);
+        }
+
         // Load wall assets and other assets
         let wall_assets = [
             // Wall assets - using the available wall assets
@@ -93,22 +93,28 @@ impl GameState {
                 "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png",
             ),
         ];
-        
-        asset_manager.load_assets(ctx, &wall_assets).expect("Failed to load wall assets");
-        
+
+        asset_manager
+            .load_assets(ctx, &wall_assets)
+            .expect("Failed to load wall assets");
+
+        asset_manager.debug_print_loaded_assets();
+
         // Send registration/login command
-        nc.send("register xyz 123\r\n".to_string());
+        // nc.send_str("register xyz 123\r\n".to_string());
+        let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+        let _ = nc.send(event);
         // Wait a bit for server response
         std::thread::sleep(std::time::Duration::from_millis(100));
-        
+
         // Create the map
         let map = Map::new();
-        
+
         // Start the player at a valid position in the map (e.g., in an open area)
         // Using grid coordinates 1,1 which should be an open space in our map
         let start_pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
         let players = Players::new("Player".to_string(), start_pos);
-        
+
         Self {
             stage: Stage::PreAuth,
             nc,
@@ -117,72 +123,139 @@ impl GameState {
             map,
         }
     }
-    
+
     // Helper method to load assets for a specific character type
-    fn load_character_assets(ctx: &mut Context, asset_manager: &mut AssetManager, character: &str) -> GameResult<()> {
+    fn load_character_assets(
+        ctx: &mut Context,
+        asset_manager: &mut AssetManager,
+        character: &str,
+    ) -> GameResult<()> {
         let gender = "M"; // Using male characters for now
-        let character_path = format!("/sprites/Files/Assets/Heroes/{}/{}_{}",
-            character, character, gender);
-        
+        let character_path = format!(
+            "/sprites/Files/Assets/Heroes/{}/{}_{}",
+            character, character, gender
+        );
+
         // Load idle animations
-        asset_manager.load_asset(ctx, &format!("{}_idle_down", character), 
-            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
-                character_path, character.to_lowercase(), gender.to_lowercase(), 
-                character.to_lowercase(), gender.to_lowercase()))?;
-                
-        asset_manager.load_asset(ctx, &format!("{}_idle_up", character), 
-            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
-                character_path, character.to_lowercase(), gender.to_lowercase(), 
-                character.to_lowercase(), gender.to_lowercase()))?;
-                
-        asset_manager.load_asset(ctx, &format!("{}_idle_right", character), 
-            &format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png", 
-                character_path, character.to_lowercase(), gender.to_lowercase(), 
-                character.to_lowercase(), gender.to_lowercase()))?;
-        
+        asset_manager.load_asset(
+            ctx,
+            &format!("{}_idle_down", character),
+            &format!(
+                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase()
+            ),
+        )?;
+
+        asset_manager.load_asset(
+            ctx,
+            &format!("{}_idle_up", character),
+            &format!(
+                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase()
+            ),
+        )?;
+
+        asset_manager.load_asset(
+            ctx,
+            &format!("{}_idle_right", character),
+            &format!(
+                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase()
+            ),
+        )?;
+
         // Load idle animation frames - use idle animations for all characters
         // since not all characters have sleep animations
         for i in 1..=4 {
-            let anim_path = format!("{}/{}_{}_idle_anim/{}_{}_idle_anim_f{}.png", 
-                character_path, character.to_lowercase(), gender.to_lowercase(), 
-                character.to_lowercase(), gender.to_lowercase(), i);
-            
+            let anim_path = format!(
+                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f{}.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                i
+            );
+
             asset_manager.load_asset(ctx, &format!("{}_idle_{}", character, i), &anim_path)?;
         }
-        
+
         // Load run animations
         for i in 1..=4 {
             // Down direction
-            asset_manager.load_asset(ctx, &format!("{}_run_down_{}", character, i), 
-                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
-                    character_path, character.to_lowercase(), gender.to_lowercase(), 
-                    character.to_lowercase(), gender.to_lowercase(), i))?;
-            
+            asset_manager.load_asset(
+                ctx,
+                &format!("{}_run_down_{}", character, i),
+                &format!(
+                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                    character_path,
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    i
+                ),
+            )?;
+
             // Up direction
-            asset_manager.load_asset(ctx, &format!("{}_run_up_{}", character, i), 
-                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
-                    character_path, character.to_lowercase(), gender.to_lowercase(), 
-                    character.to_lowercase(), gender.to_lowercase(), i))?;
-            
+            asset_manager.load_asset(
+                ctx,
+                &format!("{}_run_up_{}", character, i),
+                &format!(
+                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                    character_path,
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    i
+                ),
+            )?;
+
             // Right direction
-            asset_manager.load_asset(ctx, &format!("{}_run_right_{}", character, i), 
-                &format!("{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png", 
-                    character_path, character.to_lowercase(), gender.to_lowercase(), 
-                    character.to_lowercase(), gender.to_lowercase(), i))?;
+            asset_manager.load_asset(
+                ctx,
+                &format!("{}_run_right_{}", character, i),
+                &format!(
+                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                    character_path,
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    i
+                ),
+            )?;
         }
-        
+
         // Load fallback asset
-        asset_manager.load_asset(ctx, character, 
-            &format!("{}/{}_{}.png", character_path, character, gender))?;
-        
+        asset_manager.load_asset(
+            ctx,
+            character,
+            &format!("{}/{}_{}.png", character_path, character, gender),
+        )?;
+
         Ok(())
     }
 
     pub fn update(&mut self, ctx: &Context) -> GameResult<()> {
+        use Stage::*;
         match self.stage {
-            Stage::PreAuth => self.update_pre_auth(),
-            Stage::InMenu => {}
-            Stage::InGame => self.update_in_game(ctx),
+            PreAuth => self.update_pre_auth(),
+            InMenu => {}
+            InGame => self.update_in_game(ctx),
         }
 
         Ok(())
@@ -191,20 +264,22 @@ impl GameState {
     fn update_pre_auth(&mut self) {
         // Handle authentication
         let line = self.nc.recv();
+        use crate::net::NCError::*;
         match line {
             Ok(ok) => {
                 println!("{}", ok);
                 // Check if login was successful and transition to InGame
                 if ok.contains("Logged in") || ok.contains("Registered user") {
-                    log::info!("Authentication successful, entering game");
+                    log::info!("Authentication successful, entering game.");
                     self.stage = Stage::InGame;
                 }
             }
             Err(err) => match err {
-                crate::net::NCError::NoNewData => {}
-                crate::net::NCError::ConnectionError(e) => {
-                    println!("Connection error: {}", e);
+                NoNewData => {}
+                ConnectionError(e) => {
+                    log::error!("Connection error: {}", e);
                 }
+                SendError => {}
             },
         }
     }
@@ -212,32 +287,39 @@ impl GameState {
     fn update_in_game(&mut self, ctx: &Context) {
         // Check for server messages
         let line = self.nc.recv();
+        use crate::net::NCError::*;
         match line {
-            Ok(ok) => println!("{}", ok),
+            Ok(ok) => log::trace!("{}", ok),
             Err(err) => match err {
-                crate::net::NCError::NoNewData => {}
-                crate::net::NCError::ConnectionError(e) => {
-                    println!("Connection error: {}", e);
+                NoNewData => {
+                    log::trace!("No new data.")
+                }
+                ConnectionError(e) => {
+                    log::error!("Connection error: {}", e);
+                }
+                SendError => {
+                    log::error!("some send error");
                 }
             },
         }
 
         // Handle movement input
         let movement = input::handle_input(ctx);
-        
+
         // Handle key press events
         let key_press = handle_key_press(ctx);
         if key_press.switch_character {
             self.players.switch_character();
         }
-        
+
         // Update player position
         let delta_time = ctx.time.delta().as_secs_f32();
-        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
-        
+        self.players
+            .update(&movement, &self.map, GRID_SIZE, delta_time);
+
         // Send movement to server
         input::send_movement_to_server(&mut self.nc, &movement);
-        
+
         // Check for door transitions
         let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2.0;
         let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2.0;

@@ -3,8 +3,11 @@ use std::{
     net::TcpStream,
 };
 
+use protocol::ClientToServer;
+
 #[derive(Debug)]
 pub enum NCError {
+    SendError,
     NoNewData,
     ConnectionError(String),
 }
@@ -18,9 +21,19 @@ impl NetClient {
         let addr = "game.ablecorp.us:45250";
         let stream = match TcpStream::connect(addr) {
             Ok(stream) => {
-                println!("Connected to server at {}", addr);
+                log::info!("Connected to server at {}", addr);
                 // Set non-blocking mode
-                let _ = stream.set_nonblocking(true);
+                let ret = stream.set_nonblocking(true);
+                match ret {
+                    Ok(_) => {}
+                    Err(err) => {
+                        log::error!(
+                            "Failed to set nonblocking for the following reason {}.",
+                            err
+                        );
+                    }
+                }
+
                 stream
             }
             Err(e) => {
@@ -31,28 +44,36 @@ impl NetClient {
         Self { tcp: stream }
     }
 
-    pub fn send(&mut self, string: String) {
-        println!("Sending: {}", string.trim());
+    pub fn send(&mut self, cts: ClientToServer) -> Result<(), NCError> {
+        self.send_str(cts.as_line())
+    }
+
+    pub fn send_str(&mut self, string: String) -> Result<(), NCError> {
+        log::trace!("Sending: {}", string.trim());
         let a = format!("{}", string);
         match self.tcp.write(a.as_bytes()) {
-            Ok(_) => {}
-            Err(e) => println!("Error sending data: {}", e),
+            Ok(bytes) => {
+                log::trace!("Sent {} bytes to server.", bytes);
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Error sending data: {}", e);
+                Err(NCError::SendError)
+            }
         }
     }
 
     pub fn recv(&mut self) -> Result<String, NCError> {
         let mut buffer = [0; 1024];
-
+        use NCError::*;
         match self.tcp.read(&mut buffer) {
-            Ok(0) => Err(NCError::ConnectionError(
-                "Server closed connection".to_string(),
-            )),
+            Ok(0) => Err(ConnectionError("Server closed connection".to_string())),
             Ok(n) => {
                 let data = String::from_utf8_lossy(&buffer[0..n]).to_string();
                 Ok(data)
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => Err(NCError::NoNewData),
-            Err(e) => Err(NCError::ConnectionError(e.to_string())),
+            Err(e) => Err(ConnectionError(e.to_string())),
         }
     }
 }

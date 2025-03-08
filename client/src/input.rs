@@ -1,5 +1,8 @@
 use crate::net::NetClient;
-use ggez::{Context, input::keyboard::{KeyCode, KeyInput}};
+use ggez::{
+    Context,
+    input::keyboard::{KeyCode, KeyInput},
+};
 
 // Direction enum for player animation
 #[derive(PartialEq, Clone, Copy)]
@@ -32,12 +35,12 @@ pub fn handle_key_press(ctx: &Context) -> KeyPressState {
     let mut state = KeyPressState {
         switch_character: false,
     };
-    
+
     // Check if 'p' was just pressed this frame
     if ctx.keyboard.is_key_just_pressed(KeyCode::P) {
         state.switch_character = true;
     }
-    
+
     state
 }
 
@@ -81,7 +84,7 @@ pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState) {
 
         if dx_int != 0 || dy_int != 0 {
             let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
-            nc.send(move_cmd);
+            nc.send_str(move_cmd);
         }
     }
 }

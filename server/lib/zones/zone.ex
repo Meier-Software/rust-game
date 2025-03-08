@@ -8,7 +8,7 @@ defmodule Zone do
       # Name, PID
     }
 
-    zone_data = %{:zone_name => "#{name}", :playerlist => player_list}
+    zone_data = %{:zonename => "#{name}", :playerlist => player_list}
 
     loop_zone(zone_data)
   end
@@ -16,14 +16,13 @@ defmodule Zone do
   def loop_zone(zone_data) do
     receive do
       {:player_join, name, player_pid} ->
-        Logger.info "NEW PLAYER #{inspect(name)} JOINED ZONE."
+        zonename = Map.get(zone_data, :zonename)
+        Logger.info "New player #{inspect(name)} joined zone #{inspect(zone_data)}."
         player_list = Map.get(zone_data, :playerlist)
         player_list = Map.put(player_list, name, player_pid)
         zone_data = Map.put(zone_data, :playerlist, player_list)
 
-        send(self(), {:broadcast, "player #{name} joined HUB"})
-        # send(player_pid, {:broadcast, "line"})
-
+        send(self(), {:broadcast, "Player #{name} joined HUB"})
         loop_zone(zone_data)
 
       {:broadcast, line} ->
@@ -31,7 +30,7 @@ defmodule Zone do
         player_list = Map.get(zone_data, :playerlist)
 
         for {k, player_pid} <- player_list do
-          Logger.info "player name #{k}, player pid #{inspect(player_pid)}"
+          Logger.info "Player name #{k}, player pid #{inspect(player_pid)}"
           send(player_pid, {:client_send, line})
         end
 

@@ -1,6 +1,6 @@
 use ggez::{
-    graphics::{self, DrawParam},
     GameResult,
+    graphics::{self, DrawParam},
 };
 use protocol::Position;
 
@@ -28,23 +28,25 @@ pub enum CharacterType {
 impl CharacterType {
     // Get the folder name for this character type
     pub fn folder_name(&self) -> &'static str {
+        use CharacterType::*;
         match self {
-            CharacterType::Knight => "Knight",
-            CharacterType::Archer => "Archer",
-            CharacterType::Elf => "Elf",
-            CharacterType::Lizard => "Lizard",
-            CharacterType::Wizard => "Wizzard", // Note the spelling in the folder structure
+            Knight => "Knight",
+            Archer => "Archer",
+            Elf => "Elf",
+            Lizard => "Lizard",
+            Wizard => "Wizzard", // Note the spelling in the folder structure
         }
     }
-    
+
     // Get the next character type in the cycle
     pub fn next(&self) -> Self {
+        use CharacterType::*;
         match self {
-            CharacterType::Knight => CharacterType::Archer,
-            CharacterType::Archer => CharacterType::Elf,
-            CharacterType::Elf => CharacterType::Lizard,
-            CharacterType::Lizard => CharacterType::Wizard,
-            CharacterType::Wizard => CharacterType::Knight,
+            Knight => Archer,
+            Archer => Elf,
+            Elf => Lizard,
+            Lizard => Wizard,
+            Wizard => Knight,
         }
     }
 }
@@ -56,8 +58,8 @@ pub struct Player {
     pub frame_timer: f32,
     pub direction: Direction,
     pub is_moving: bool,
-    pub idle_timer: f32, // Track how long the player has been idle
-    pub is_in_idle_animation: bool, // Whether the player is in the idle animation
+    pub idle_timer: f32,               // Track how long the player has been idle
+    pub is_in_idle_animation: bool,    // Whether the player is in the idle animation
     pub character_type: CharacterType, // The current character model
 }
 
@@ -80,19 +82,20 @@ impl Player {
         // Store previous state
         let was_moving = self.is_moving;
         let previous_direction = self.direction;
-        
+
         // Update movement state
         self.is_moving = movement.is_moving;
         self.direction = movement.direction;
-        
+
         // Reset idle timer if player starts moving or changes direction
-        if ((was_moving != self.is_moving) && self.is_moving) || 
-           (previous_direction != self.direction) {
+        if ((was_moving != self.is_moving) && self.is_moving)
+            || (previous_direction != self.direction)
+        {
             self.idle_timer = 0.0;
             self.is_in_idle_animation = false;
-            println!("Player moved or changed direction, resetting idle animation state"); // Debug output
+            log::trace!("Player moved or changed direction, resetting idle animation state");
         }
-        
+
         // Update animation if moving
         if self.is_moving {
             // Update animation frame
@@ -104,23 +107,28 @@ impl Player {
         } else {
             // When not moving, increment idle timer
             self.idle_timer += delta_time;
-            
+
             // Check if we should switch to idle animation
             if self.idle_timer >= IDLE_ANIMATION_DELAY && !self.is_in_idle_animation {
                 self.is_in_idle_animation = true;
                 self.current_frame = 0; // Reset frame for idle animation
                 self.frame_timer = 0.0;
-                println!("Entering idle animation"); // Debug output
+                log::info!("Entering idle animation");
             }
-            
+
             // If in idle animation, update frames continuously to loop the animation
             if self.is_in_idle_animation {
                 self.frame_timer += delta_time;
-                if self.frame_timer >= ANIMATION_FRAME_TIME * 3.0 { // Even slower idle/sleep animation
+                if self.frame_timer >= ANIMATION_FRAME_TIME * 3.0 {
+                    // Even slower idle/sleep animation
                     self.frame_timer = 0.0;
                     let old_frame = self.current_frame;
                     self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Loop through frames
-                    println!("Idle animation frame changed: {} -> {}", old_frame, self.current_frame); // Debug output
+                    log::trace!(
+                        "Idle animation frame changed: {} -> {}",
+                        old_frame,
+                        self.current_frame
+                    ); // Debug output
                 }
             } else {
                 // Reset to first frame when not moving and not in idle animation
@@ -156,11 +164,15 @@ impl Player {
         }
     }
 
-    pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
+    pub fn draw(
+        &self,
+        canvas: &mut graphics::Canvas,
+        asset_manager: &AssetManager,
+    ) -> GameResult<()> {
         // Get the character folder name
         let character = self.character_type.folder_name();
         let gender = "M"; // Using male characters for now
-        
+
         // Get the appropriate sprite based on direction, movement state, and character type
         let asset_name = if self.is_moving {
             // For moving animations, use the run animations with the current frame
@@ -187,22 +199,20 @@ impl Player {
 
         // Debug print the asset name when in idle animation
         if self.is_in_idle_animation {
-            println!("Using idle animation asset: {}", asset_name);
+            log::trace!("Using idle animation asset: {}", asset_name);
         }
 
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
             // Determine if we need to flip the sprite horizontally (for left direction)
             let flip_x = self.direction == Direction::Left;
-            
+
             // Draw the hero sprite at the correct position
-            let mut draw_params = DrawParam::default()
-                .dest([self.pos.x, self.pos.y])
-                .scale([
-                    if flip_x { -1.0 } else { 1.0 } * PLAYER_SIZE / hero_asset.img.width() as f32, 
-                    PLAYER_SIZE / hero_asset.img.height() as f32
-                ]);
-                
+            let mut draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
+                if flip_x { -1.0 } else { 1.0 } * PLAYER_SIZE / hero_asset.img.width() as f32,
+                PLAYER_SIZE / hero_asset.img.height() as f32,
+            ]);
+
             // If flipping, adjust the destination to account for the flipped sprite
             if flip_x {
                 draw_params = draw_params.dest([self.pos.x + PLAYER_SIZE, self.pos.y]);
@@ -213,18 +223,18 @@ impl Player {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = format!("{}", character);
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
-                let draw_params = DrawParam::default()
-                    .dest([self.pos.x, self.pos.y])
-                    .scale([PLAYER_SIZE / player_asset.img.width() as f32, 
-                            PLAYER_SIZE / player_asset.img.height() as f32]);
+                let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
+                    PLAYER_SIZE / player_asset.img.width() as f32,
+                    PLAYER_SIZE / player_asset.img.height() as f32,
+                ]);
 
                 canvas.draw(&player_asset.img, draw_params);
             } else if let Some(player_asset) = asset_manager.get_asset("player") {
                 // Ultimate fallback to the original player asset
-                let draw_params = DrawParam::default()
-                    .dest([self.pos.x, self.pos.y])
-                    .scale([PLAYER_SIZE / player_asset.img.width() as f32, 
-                            PLAYER_SIZE / player_asset.img.height() as f32]);
+                let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
+                    PLAYER_SIZE / player_asset.img.width() as f32,
+                    PLAYER_SIZE / player_asset.img.height() as f32,
+                ]);
 
                 canvas.draw(&player_asset.img, draw_params);
             }
@@ -235,7 +245,7 @@ impl Player {
 
     pub fn switch_character(&mut self) {
         self.character_type = self.character_type.next();
-        println!("Switched to character: {:?}", self.character_type);
+        log::info!("Switched to character: {:?}", self.character_type);
     }
 }
 
@@ -256,7 +266,7 @@ impl Players {
         self.self_player
             .update(movement, map, grid_size, delta_time);
     }
-    
+
     // Add a method to switch the character type for the main player
     pub fn switch_character(&mut self) {
         self.self_player.switch_character();

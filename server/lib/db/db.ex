@@ -19,7 +19,7 @@ defmodule Database do
       :ok ->
         Logger.info("Created DB")
 
-      {:error, error} ->
+      {:error, _error} ->
         Logger.info("Already created db")
     end
 

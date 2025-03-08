@@ -1,11 +1,15 @@
 defmodule Player do
   require Logger
+  @moduledoc """
+  A player process should be in charge of its own data and should regularly save this state to the db.
+  """
+
 
   def start(client_pid, username) do
     Logger.info("New player-(#{username}) spawned for client-(#{inspect(client_pid)})")
-    stats = %{:hp => 10, :mp => 20}
 
-    info = %{:x => 0.0, :y => 0.0}
+    stats = %{:hp => 10, :mp => 20}
+    info = %{:x => 0.0, :y => 0.0, :username => username}
 
     send(:zone_manager, {:player_join, username, self()})
     loop_player(client_pid, stats, info)
@@ -14,7 +18,9 @@ defmodule Player do
   def loop_player(client_pid, stats, info) do
     receive do
       {:heal, value, pid} ->
-        Logger.info("Player healed.")
+        {:ok, username} = Map.fetch(info, :username)
+        Logger.info "Player #{inspect(username)} healed."
+
         {value, _} = Integer.parse(value)
         {:ok, hp} = Map.fetch(stats, :hp)
         stats = Map.put(stats, :hp, hp + value)
@@ -44,9 +50,10 @@ defmodule Player do
         send(client_pid, {:client_send, line})
         loop_player(client_pid, stats, info)
 
-
       err ->
-        Logger.info "#{inspect(err)}"
+        {:ok, username} = Map.fetch(info, :username)
+
+        Logger.info "Client Error #{inspect(err)} from #{username}."
         loop_player(client_pid, stats, info)
 
     after

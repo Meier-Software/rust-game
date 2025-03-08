@@ -12,14 +12,11 @@ defmodule Client do
   end
 
   def repeat_start(client_socket) do
-    Logger.info("Client relogged in.")
     loop_client(client_socket)
   end
 
   def loop_client(client_socket) do
-    Logger.info "Loop client pre read"
     line = read_line(client_socket)
-    Logger.info "Loop client post read"
     line = process_line(line, client_socket)
     write_line(line, client_socket)
 
@@ -43,7 +40,7 @@ defmodule Client do
 
           {:player, true} ->
             Client.Authed.start(client_socket, username)
-            ""
+            "Login Success"
         end
 
       ["register", username, password] ->
@@ -58,7 +55,6 @@ defmodule Client do
             "Registered user."
 
           {:player, true} ->
-            # Client.Authed.start(client_socket, username)
             "Already a player."
         end
 
