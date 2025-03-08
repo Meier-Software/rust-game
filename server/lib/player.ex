@@ -8,10 +8,6 @@ defmodule Player do
     info = %{:x => 0.0, :y => 0.0}
 
     send(:zone_manager, {:player_join, username, self()})
-
-
-
-
     loop_player(client_pid, stats, info)
   end
 
@@ -42,8 +38,6 @@ defmodule Player do
         info = Map.put(info, :y, y + y_delta)
 
         loop_player(client_pid, stats, info)
-
-
 
       {:client_send, line} ->
         Logger.info "Player got client send event."

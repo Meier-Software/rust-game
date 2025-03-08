@@ -1,8 +1,5 @@
-use ggez::{
-    Context,
-    input::keyboard::{KeyCode},
-};
 use crate::net::NetClient;
+use ggez::{Context, input::keyboard::KeyCode};
 
 // Direction enum for player animation
 #[derive(PartialEq, Clone, Copy)]
@@ -29,28 +26,20 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     let mut dx = 0.0;
     let mut dy = 0.0;
     let mut direction = Direction::Down;
-    
-    if ctx.keyboard.is_key_pressed(KeyCode::Up)
-        || ctx.keyboard.is_key_pressed(KeyCode::W)
-    {
+
+    if ctx.keyboard.is_key_pressed(KeyCode::Up) || ctx.keyboard.is_key_pressed(KeyCode::W) {
         dy -= MOVEMENT_SPEED;
         direction = Direction::Up;
     }
-    if ctx.keyboard.is_key_pressed(KeyCode::Down)
-        || ctx.keyboard.is_key_pressed(KeyCode::S)
-    {
+    if ctx.keyboard.is_key_pressed(KeyCode::Down) || ctx.keyboard.is_key_pressed(KeyCode::S) {
         dy += MOVEMENT_SPEED;
         direction = Direction::Down;
     }
-    if ctx.keyboard.is_key_pressed(KeyCode::Left)
-        || ctx.keyboard.is_key_pressed(KeyCode::A)
-    {
+    if ctx.keyboard.is_key_pressed(KeyCode::Left) || ctx.keyboard.is_key_pressed(KeyCode::A) {
         dx -= MOVEMENT_SPEED;
         direction = Direction::Left;
     }
-    if ctx.keyboard.is_key_pressed(KeyCode::Right)
-        || ctx.keyboard.is_key_pressed(KeyCode::D)
-    {
+    if ctx.keyboard.is_key_pressed(KeyCode::Right) || ctx.keyboard.is_key_pressed(KeyCode::D) {
         dx += MOVEMENT_SPEED;
         direction = Direction::Right;
     }
@@ -70,7 +59,7 @@ pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState) {
         // Convert to integer deltas for the server
         let dx_int = movement.dx as i32;
         let dy_int = movement.dy as i32;
-        
+
         if dx_int != 0 || dy_int != 0 {
             let move_cmd = format!("move {} {}\r\n", dx_int, dy_int);
             nc.send(move_cmd);

@@ -41,16 +41,20 @@ impl Player {
     }
 
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
-        // Update movement state
+        // Store previous state
         let was_moving = self.is_moving;
+        let previous_direction = self.direction;
+        
+        // Update movement state
         self.is_moving = movement.is_moving;
         self.direction = movement.direction;
         
-        // Reset idle timer if player starts moving
-        if !was_moving && self.is_moving {
+        // Reset idle timer if player starts moving or changes direction
+        if ((was_moving != self.is_moving) && self.is_moving) || 
+           (previous_direction != self.direction) {
             self.idle_timer = 0.0;
             self.is_in_idle_animation = false;
-            println!("Player started moving, resetting idle animation state"); // Debug output
+            println!("Player moved or changed direction, resetting idle animation state"); // Debug output
         }
         
         // Update animation if moving
@@ -88,22 +92,22 @@ impl Player {
                 self.frame_timer = 0.0;
             }
         }
-        
+
         // Update position
         if movement.is_moving {
             // Calculate new position
             let new_x = self.pos.x + movement.dx;
             let new_y = self.pos.y + movement.dy;
-            
+
             // Calculate the center of the player sprite for collision detection
             let center_x = new_x + PLAYER_SIZE / 2.0;
             let center_y = new_y + PLAYER_SIZE / 2.0;
-            
+
             // Check horizontal movement
             if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2.0, grid_size) {
                 self.pos.x = new_x;
             }
-            
+
             // Check vertical movement
             if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2.0, center_y, grid_size) {
                 self.pos.y = new_y;
@@ -141,6 +145,11 @@ impl Player {
             }.to_string()
         };
 
+        // Debug print the asset name when in idle animation
+        if self.is_in_idle_animation {
+            println!("Using idle animation asset: {}", asset_name);
+        }
+
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
             // Determine if we need to flip the sprite horizontally (for left direction)
@@ -171,7 +180,7 @@ impl Player {
                 canvas.draw(&player_asset.img, draw_params);
             }
         }
-        
+
         Ok(())
     }
 }
@@ -188,21 +197,25 @@ impl Players {
             other_players: Vec::new(),
         }
     }
-    
+
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
-        self.self_player.update(movement, map, grid_size, delta_time);
+        self.self_player
+            .update(movement, map, grid_size, delta_time);
     }
-    
-    pub fn draw(&self, canvas: &mut graphics::Canvas, asset_manager: &AssetManager) -> GameResult<()> {
+
+    pub fn draw(
+        &self,
+        canvas: &mut graphics::Canvas,
+        asset_manager: &AssetManager,
+    ) -> GameResult<()> {
         // Draw the main player
         self.self_player.draw(canvas, asset_manager)?;
-        
+
         // Draw other players
         for player in &self.other_players {
             player.draw(canvas, asset_manager)?;
         }
-        
+
         Ok(())
     }
 }
-
