@@ -6,6 +6,11 @@ use crate::assets::AssetManager;
 pub enum TileType {
     Empty,
     Wall,
+    Wall2,  // New wall type for wall with index 2
+    Wall3,  // New wall type for wall with index 3
+    Wall4,  // Bottom wall
+    Wall5, //Top Left
+    Wall6, //Top Right
 }
 
 // Define the map as a 2D grid with different tile types
@@ -17,20 +22,21 @@ pub struct Map {
 
 impl Map {
     pub fn new() -> Self {
-        // Start with a basic layout where 0 is empty and 1 is wall
+        // Start with a basic layout where:
+        // 0 is empty, 1 is wall, 2 is wall2, 3 is wall3
         let basic_grid = vec![
-            vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            vec![1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-            vec![1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-            vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            vec![2, 5, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3],
+            vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+            vec![2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
         ];
 
         let height = basic_grid.len();
@@ -41,12 +47,16 @@ impl Map {
         
         for y in 0..height {
             for x in 0..width {
-                if basic_grid[y][x] == 0 {
-                    grid[y][x] = TileType::Empty;
-                } else {
-                    // All walls are the same type now
-                    grid[y][x] = TileType::Wall;
-                }
+                grid[y][x] = match basic_grid[y][x] {
+                    0 => TileType::Empty,
+                    1 => TileType::Wall,
+                    2 => TileType::Wall2,
+                    3 => TileType::Wall3,
+                    4 => TileType::Wall4,
+                    5 => TileType::Wall5,
+                    6 => TileType::Wall6,
+                    _ => TileType::Wall, // Default to regular wall for any other value
+                };
             }
         }
 
@@ -78,23 +88,113 @@ impl Map {
         // Then draw wall tiles on top
         for y in 0..self.height {
             for x in 0..self.width {
-                if self.grid[y][x] != TileType::Empty {
-                    // Use wall_middle for all walls
-                    if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
-                        let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                        canvas.draw(
-                            &wall_asset.img,
-                            graphics::DrawParam::default()
-                                .dest(dest)
-                        );
-                    } else if let Some(default_wall) = asset_manager.get_asset("wall") {
-                        // Fallback to default wall if specific asset not found
-                        let dest = [x as f32 * grid_size, y as f32 * grid_size];
-                        canvas.draw(
-                            &default_wall.img,
-                            graphics::DrawParam::default()
-                                .dest(dest)
-                        );
+                match self.grid[y][x] {
+                    TileType::Empty => {}, // Skip empty tiles
+                    TileType::Wall => {
+                        // Use wall_middle for regular walls
+                        if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
+                    },
+                    TileType::Wall2 => {
+                        // Use wall2 for the second wall type
+                        if let Some(wall_asset) = asset_manager.get_asset("wall2") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
+                            // Fallback to default wall if specific asset not found
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &default_wall.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
+                    },
+                    TileType::Wall3 => {
+                        // Use wall3 for the third wall type
+                        if let Some(wall_asset) = asset_manager.get_asset("wall3") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
+                            // Fallback to default wall if specific asset not found
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &default_wall.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
+                    },
+                    TileType::Wall4 => {
+                        // Use wall4 for the bottom wall type
+                        if let Some(wall_asset) = asset_manager.get_asset("wall4") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
+                            // Fallback to default wall if specific asset not found
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &default_wall.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
+                    },
+                    TileType::Wall5 => {
+                        // Use wall4 for the bottom wall type
+                        if let Some(wall_asset) = asset_manager.get_asset("wall5") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
+                            // Fallback to default wall if specific asset not found
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &default_wall.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
+                    },
+                    TileType::Wall6 => {
+                        // Use wall4 for the bottom wall type
+                        if let Some(wall_asset) = asset_manager.get_asset("wall6") {
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &wall_asset.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
+                            // Fallback to default wall if specific asset not found
+                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            canvas.draw(
+                                &default_wall.img,
+                                graphics::DrawParam::default()
+                                    .dest(dest)
+                            );
+                        }
                     }
                 }
             }
@@ -125,9 +225,10 @@ impl Map {
                 return false;
             }
             
-            // If this corner is in a wall, position is invalid
-            if self.grid[grid_y][grid_x] != TileType::Empty {
-                return false;
+            // If this corner is in any type of wall, position is invalid
+            match self.grid[grid_y][grid_x] {
+                TileType::Empty => {}, // Empty space is valid
+                TileType::Wall | TileType::Wall2 | TileType::Wall3 | TileType::Wall4 | TileType::Wall5 | TileType::Wall6 => return false, // Any wall type is invalid
             }
         }
         
