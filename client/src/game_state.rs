@@ -26,6 +26,7 @@ pub enum Stage {
     #[allow(unused)]
     InMenu,
     InGame,
+    Offline, // New stage for offline mode
 }
 
 pub struct GameState {
@@ -44,8 +45,55 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(ctx: &mut Context) -> Self {
-        let mut nc = NetClient::new();
+        Self::new_with_mode(ctx, false)
+    }
+
+    pub fn new_offline(ctx: &mut Context) -> Self {
+        Self::new_with_mode(ctx, true)
+    }
+    
+    pub fn new_with_map(ctx: &mut Context, map: Map) -> Self {
+        Self::new_with_mode_and_map(ctx, false, map)
+    }
+    
+    pub fn new_offline_with_map(ctx: &mut Context, map: Map) -> Self {
+        Self::new_with_mode_and_map(ctx, true, map)
+    }
+
+    fn new_with_mode(ctx: &mut Context, offline_mode: bool) -> Self {
+        // Create a default map
+        let map = Map::new();
+        Self::new_with_mode_and_map(ctx, offline_mode, map)
+    }
+    
+    fn new_with_mode_and_map(ctx: &mut Context, offline_mode: bool, map: Map) -> Self {
+        // Create network client based on mode
+        let mut nc = if offline_mode {
+            NetClient::new_offline()
+        } else {
+            NetClient::new()
+        };
+
+        // Create asset manager and load assets
         let mut asset_manager = AssetManager::new();
+
+        // Load map assets
+        asset_manager
+            .load_assets(
+                ctx,
+                &[
+                    ("floor", "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png"),
+                    ("wall_middle", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png"),
+                    ("wall2", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_left.png"),
+                    ("wall3", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_right.png"),
+                    ("wall4", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Top/wall_top_mid.png"),
+                    ("wall5", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_left.png"),
+                    ("wall6", "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_rigth.png"),
+                    ("skull", "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png"),
+                    ("door", "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png"),
+                ],
+            )
+            .expect("Failed to load map assets");
 
         // Load assets for all character types
         let char_asset_names = vec!["Archer", "Knight", "Elf", "Lizard", "Wizzard"];
@@ -54,73 +102,23 @@ impl GameState {
             Self::load_character_assets(ctx, &mut asset_manager, char_asset_name).expect(&expect);
         }
 
-        // Load wall assets and other assets
-        let wall_assets = [
-            // Wall assets - using the available wall assets
-            (
-                "wall_middle",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Walls/Walls(1)/wall(1)_mid.png",
-            ), // Default wall
-            (
-                "wall2",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_left.png",
-            ), // Wall with index 2
-            (
-                "wall3",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Side/wall_side_mid_right.png",
-            ), // Wall with index 3
-            (
-                "wall4",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Top/wall_top_mid.png",
-            ),
-            (
-                "wall5",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_left.png",
-            ),
-            (
-                "wall6",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Walls/Wall_Inner_Corner/wall_inner_corner_mid_rigth.png",
-            ),
-            // Floor asset
-            (
-                "floor",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Floors/Floor(1)/floor_1(1).png",
-            ),
-            // Decoration assets
-            (
-                "skull",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/skull.png",
-            ),
-            // Door asset
-            (
-                "door",
-                "/sprites/Files/Assets/Tilesets/Tileset_1/Doors/doors_leaf_closed.png",
-            ),
-        ];
-
-        asset_manager
-            .load_assets(ctx, &wall_assets)
-            .expect("Failed to load wall assets");
-
         asset_manager.debug_print_loaded_assets();
 
-        // Send registration/login command
-        // nc.send_str("register xyz 123\r\n".to_string());
-        let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
-        let _ = nc.send(event);
-        // Wait a bit for server response
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        // Create the map
-        let map = Map::new();
-
-        // Start the player at a valid position in the map (e.g., in an open area)
-        // Using grid coordinates 1,1 which should be an open space in our map
+        // Create player at starting position
         let start_pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
         let players = Players::new("Player".to_string(), start_pos);
 
         Self {
-            stage: Stage::PreAuth,
+            stage: if offline_mode { 
+                Stage::Offline 
+            } else { 
+                // Send registration/login command if online
+                let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+                let _ = nc.send(event);
+                // Wait a bit for server response
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                Stage::PreAuth 
+            },
             nc,
             asset_manager,
             players,
@@ -170,6 +168,20 @@ impl GameState {
         asset_manager.load_asset(
             ctx,
             &format!("{}_idle_right", character),
+            &format!(
+                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase()
+            ),
+        )?;
+        
+        // Add left-facing idle animation (using the same sprite as right for now)
+        asset_manager.load_asset(
+            ctx,
+            &format!("{}_idle_left", character),
             &format!(
                 "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
                 character_path,
@@ -242,6 +254,21 @@ impl GameState {
                     i
                 ),
             )?;
+            
+            // Left direction (using the same sprite as right for now)
+            asset_manager.load_asset(
+                ctx,
+                &format!("{}_run_left_{}", character, i),
+                &format!(
+                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                    character_path,
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    character.to_lowercase(),
+                    gender.to_lowercase(),
+                    i
+                ),
+            )?;
         }
 
         // Load fallback asset
@@ -260,6 +287,7 @@ impl GameState {
             PreAuth => self.update_pre_auth(),
             InMenu => {}
             InGame => self.update_in_game(ctx),
+            Offline => self.update_offline(ctx),
         }
 
         Ok(())
@@ -327,29 +355,67 @@ impl GameState {
         input::send_movement_to_server(&mut self.nc, &movement);
 
         // Check for door transitions
-        let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2.0;
-        let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2.0;
-
-        if let Some((door_x, door_y, direction)) =
-            self.map
-                .check_door_transition(player_center_x, player_center_y, GRID_SIZE)
-        {
-            // Calculate base position at the door
-            let base_x = door_x as f32 * GRID_SIZE;
-            let base_y = door_y as f32 * GRID_SIZE;
-
-            // Offset the player from the door based on the direction
-            // This prevents the player from immediately triggering the door again
-            use protocol::Facing::*;
-            let (a, b, c) = match direction {
-                North => (base_x, base_y - GRID_SIZE, North),
-                South => (base_x, base_y + GRID_SIZE, South),
-                West => (base_x - GRID_SIZE, base_y, West),
-                East => (base_x + GRID_SIZE, base_y, East),
+        let player_pos = self.players.self_player.pos;
+        if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
+            // Update player position based on the door position and facing direction
+            let grid_x = door_x as f32;
+            let grid_y = door_y as f32;
+            
+            // Apply offset based on facing direction to prevent immediate re-triggering
+            let offset = 1.5; // Offset by 1.5 grid cells
+            
+            let (x_pos, y_pos) = match facing {
+                protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
+                protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
+                protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
+                protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
             };
-            self.players.self_player.pos.x = a;
-            self.players.self_player.pos.y = b;
-            self.players.self_player.direction = c;
+            
+            // Update player position and direction
+            self.players.self_player.pos.x = x_pos;
+            self.players.self_player.pos.y = y_pos;
+            self.players.self_player.direction = facing;
+        }
+    }
+
+    fn update_offline(&mut self, ctx: &Context) {
+        // In offline mode, we handle input and update the game state directly
+        // without communicating with the server
+        
+        // Get input
+        let movement = input::handle_input(ctx);
+        let key_press = input::handle_key_press(ctx);
+        
+        // Update player position
+        let delta_time = ctx.time.delta().as_secs_f32();
+        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+        
+        // Handle character switching
+        if key_press.switch_character {
+            self.players.switch_character();
+        }
+        
+        // Check for door transitions
+        let player_pos = self.players.self_player.pos;
+        if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
+            // Update player position based on the door position and facing direction
+            let grid_x = door_x as f32;
+            let grid_y = door_y as f32;
+            
+            // Apply offset based on facing direction to prevent immediate re-triggering
+            let offset = 1.5; // Offset by 1.5 grid cells
+            
+            let (x_pos, y_pos) = match facing {
+                protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
+                protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
+                protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
+                protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
+            };
+            
+            // Update player position and direction
+            self.players.self_player.pos.x = x_pos;
+            self.players.self_player.pos.y = y_pos;
+            self.players.self_player.direction = facing;
         }
     }
 
@@ -361,6 +427,12 @@ impl GameState {
             PreAuth => self.draw_pre_auth(ctx, &mut canvas),
             InMenu => {}
             InGame => self.draw_in_game(ctx, &mut canvas),
+            Offline => self.draw_in_game(ctx, &mut canvas), // Use the same drawing code for offline mode
+        }
+
+        // Draw offline mode indicator if in offline mode
+        if let Stage::Offline = self.stage {
+            self.draw_offline_indicator(ctx, &mut canvas);
         }
 
         canvas.finish(ctx)?;
@@ -419,6 +491,18 @@ impl GameState {
             DrawParam::default()
                 .dest([camera_x + 10.0, camera_y + 10.0])
                 .color(Color::WHITE),
+        );
+    }
+
+    fn draw_offline_indicator(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
+        // Draw offline mode indicator in the top-right corner
+        let screen_width = ctx.gfx.window().inner_size().width as f32;
+        
+        let text = Text::new("OFFLINE MODE");
+        let text_pos = [screen_width - 120.0, 10.0];
+        canvas.draw(
+            &text,
+            DrawParam::default().dest(text_pos).color(Color::YELLOW),
         );
     }
 }

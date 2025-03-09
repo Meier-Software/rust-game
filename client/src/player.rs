@@ -181,7 +181,7 @@ impl Player {
             use protocol::Facing::*;
             match self.direction {
                 North => format!("{}_run_up_{}", character, frame),
-                East => format!("{}_run_right_{}", character, frame), // Use right sprites but flip them
+                East => format!("{}_run_right_{}", character, frame),
                 South => format!("{}_run_down_{}", character, frame),
                 West => format!("{}_run_left_{}", character, frame),
             }
@@ -194,9 +194,9 @@ impl Player {
             use protocol::Facing::*;
             match self.direction {
                 North => format!("{}_idle_up", character),
-                East => format!("{}_idle_right", character), // Use right idle but flip it
+                East => format!("{}_idle_right", character),
                 South => format!("{}_idle_down", character),
-                West => format!("{}_idle_right", character),
+                West => format!("{}_idle_left", character),
             }
         };
 
@@ -207,8 +207,9 @@ impl Player {
 
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
-            // Determine if we need to flip the sprite horizontally (for left direction)
-            let flip_x = self.direction == protocol::Facing::East;
+            // Determine if we need to flip the sprite horizontally for left-facing sprites
+            // Since we're using the same sprites for both left and right, we need to flip the left-facing ones
+            let flip_x = self.direction == protocol::Facing::West;
 
             // Draw the hero sprite at the correct position
             let mut draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
@@ -224,22 +225,15 @@ impl Player {
             canvas.draw(&hero_asset.img, draw_params);
         } else {
             // Fallback to the old player sprite if the new assets aren't found
-            let fallback_asset =  character.to_string();
+            let fallback_asset = character.to_string();
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
                 let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
                     PLAYER_SIZE / player_asset.img.width() as f32,
                     PLAYER_SIZE / player_asset.img.height() as f32,
                 ]);
-
                 canvas.draw(&player_asset.img, draw_params);
-            } else if let Some(player_asset) = asset_manager.get_asset("player") {
-                // Ultimate fallback to the original player asset
-                let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
-                    PLAYER_SIZE / player_asset.img.width() as f32,
-                    PLAYER_SIZE / player_asset.img.height() as f32,
-                ]);
-
-                canvas.draw(&player_asset.img, draw_params);
+            } else {
+                log::warn!("Could not find asset for player: {}", asset_name);
             }
         }
 

@@ -1,3 +1,4 @@
+#[derive(Debug, Copy, Clone)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -31,6 +32,7 @@ pub enum ServerToClient {
     EntityMoved(Position),
 }
 
+#[derive(Debug)]
 pub enum ClientToServer {
     AttemptPlayerMove(Position),
     AttemptPlayerFacingChange(Facing),
