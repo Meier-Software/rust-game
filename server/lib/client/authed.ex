@@ -70,7 +70,7 @@ defmodule Client.Authed do
     end
   end
 
-  def loop_client(client_socket, auth, player_pid) do
+  defp loop_client(client_socket, auth, player_pid) do
     # Logger.info("Loop Client")
 
     receive do
@@ -114,7 +114,7 @@ defmodule Client.Authed do
     :gen_tcp.send(client_socket, line)
   end
 
-  def raw_write_line(line, client_socket) do
+  defp raw_write_line(line, client_socket) do
     :gen_tcp.send(client_socket, line)
   end
 end
