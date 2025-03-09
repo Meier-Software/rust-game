@@ -1,28 +1,18 @@
 use client::map::Map;
-use std::env;
 use std::path::Path;
 
 fn main() {
-    // Parse command line arguments
-    let args: Vec<String> = env::args().collect();
-    let output_path = if args.len() > 1 {
-        args[1].clone()
-    } else {
-        // Default to saving in the client/assets directory
-        "client/assets/custom_map.json".to_string()
-    };
+    let output_path = "client/assets/default_map.json";
 
     // Ensure the directory exists
-    if let Some(parent) = Path::new(&output_path).parent() {
+    if let Some(parent) = Path::new(output_path).parent() {
         if !parent.exists() {
             println!("Creating directory: {:?}", parent);
             std::fs::create_dir_all(parent).expect("Failed to create directory");
         }
     }
 
-    println!("Generating custom map to {}", output_path);
-    
-    // Create a custom map with three rooms
+    println!("Generating default map to {}", output_path);
     
     // First room - entrance hall
     let room1_layout = vec![
@@ -106,7 +96,7 @@ fn main() {
     
     // Save the map to JSON
     match map.to_json(output_path) {
-        Ok(_) => println!("Custom map saved to {}", output_path),
+        Ok(_) => println!("Default map saved to {}", output_path),
         Err(e) => eprintln!("Error saving map: {}", e),
     }
 } 

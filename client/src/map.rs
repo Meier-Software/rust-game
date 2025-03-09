@@ -78,28 +78,36 @@ impl Room {
 impl Map {
     pub fn new() -> Self {
         // Try to load the default map from JSON
-        let default_paths = [
-            "client/assets/default_map.json",
-            "assets/default_map.json",
-        ];
+        let default_path = "client/assets/default_map.json";
         
-        for path in default_paths {
-            if Path::new(path).exists() {
-                match Self::from_json(path) {
-                    Ok(map) => {
-                        println!("Loaded default map from {}", path);
-                        return map;
-                    },
-                    Err(e) => {
-                        println!("Failed to load default map from {}: {}", path, e);
-                        // Continue to try the next path
-                    }
+        if Path::new(default_path).exists() {
+            match Self::from_json(default_path) {
+                Ok(map) => {
+                    println!("Loaded default map from {}", default_path);
+                    return map;
+                },
+                Err(e) => {
+                    println!("Failed to load default map from {}: {}", default_path, e);
                 }
             }
         }
         
-        // If no default map is found, create a simple fallback map
-        println!("No default map found, creating a simple fallback map");
+        // Check for custom map
+        let custom_path = "client/assets/custom_map.json";
+        if Path::new(custom_path).exists() {
+            match Self::from_json(custom_path) {
+                Ok(map) => {
+                    println!("Loaded custom map from {}", custom_path);
+                    return map;
+                },
+                Err(e) => {
+                    println!("Failed to load custom map from {}: {}", custom_path, e);
+                }
+            }
+        }
+        
+        // If no map is found, create a simple fallback map
+        println!("No map found, creating a simple fallback map");
         Self::create_fallback_map()
     }
     
