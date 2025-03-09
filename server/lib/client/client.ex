@@ -36,8 +36,15 @@ defmodule Client do
             "Login error."
 
           {:player, true} ->
-            Client.Authed.start(client_socket, username)
-            "Login Success"
+            case Db.DbApi.login(username, password) do
+              {:player, true} ->
+                Client.Authed.start(client_socket, username)
+                "Login Success"
+
+              {:player, false} ->
+                Logger.info("User #{username} tried to login with incorrect password")
+                "Password incorrect"
+            end
         end
 
       ["register", username, password] ->

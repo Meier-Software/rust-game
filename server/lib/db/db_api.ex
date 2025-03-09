@@ -18,4 +18,12 @@ defmodule Db.DbApi do
       {:player, value} -> {:player, value}
     end
   end
+
+  def login(username, password) do
+    send(:database, {:login, :player, username, password, self()})
+
+    receive do
+      {:player, value} -> {:player, value}
+    end
+  end
 end

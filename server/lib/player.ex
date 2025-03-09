@@ -9,6 +9,7 @@ defmodule Player do
     Logger.info("New player-(#{username}) spawned for client-(#{inspect(client_pid)})")
 
     stats = %{:hp => 10, :mp => 20}
+
     info = %{
       :x => 0.0,
       :y => 0.0,
@@ -36,7 +37,6 @@ defmodule Player do
       {:stats, pid} ->
         send(pid, {:stats, stats, info})
         loop_player(client_pid, stats, info)
-
 
       {:facing, dir, pid} ->
         send(pid, {:faced, dir})
@@ -70,7 +70,6 @@ defmodule Player do
 
       _ ->
         loop_player(client_pid, stats, info)
-
     after
       0 ->
         loop_player(client_pid, stats, info)

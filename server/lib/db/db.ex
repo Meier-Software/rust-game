@@ -36,7 +36,49 @@ defmodule Database do
     receive do
       {:get, :player, player_name, pid} ->
         Logger.info("DB transaction")
-        send(pid, {:player, false})
+
+        {:ok, statement} =
+          Exqlite.Sqlite3.prepare(
+            conn,
+            "SELECT username FROM players WHERE username=?"
+          )
+
+        :ok = Exqlite.Sqlite3.bind(statement, [player_name])
+
+        case Exqlite.Sqlite3.step(conn, statement) do
+          {:row, [row]} ->
+            Logger.info("Found player #{row}")
+            send(pid, {:player, true})
+
+          _not_found ->
+            send(pid, {:player, false})
+        end
+
+        :ok = Exqlite.Sqlite3.release(conn, statement)
+        loop_db(conn, player_count)
+
+      # TODO: This is bad, we should hash/salt passwords
+      {:login, :player, username, password, pid} ->
+        {:ok, statement} =
+          Exqlite.Sqlite3.prepare(
+            conn,
+            "SELECT username FROM players WHERE username=? AND password=?"
+          )
+
+        :ok = Exqlite.Sqlite3.bind(statement, [username, password])
+
+        case Exqlite.Sqlite3.step(conn, statement) do
+          {:row, [username]} ->
+            Logger.info("Player #{username} has logged in")
+            send(pid, {:player, true})
+
+          _error ->
+            Logger.info("Player #{username} has failed login")
+            send(pid, {:player, false})
+        end
+
+        :ok = Exqlite.Sqlite3.release(conn, statement)
+        loop_db(conn, player_count)
 
       {:new, :player, username, password, pid} ->
         {:ok, statement} =

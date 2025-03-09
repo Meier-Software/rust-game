@@ -65,7 +65,7 @@ defmodule Client.Authed do
         "You used the help command to get info about #{command}."
 
       abc ->
-        Logger.info "unimplemented " <> inspect(abc)
+        Logger.info("unimplemented " <> inspect(abc))
         "Invalid protocol."
     end
   end
