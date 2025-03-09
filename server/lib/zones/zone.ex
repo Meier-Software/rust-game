@@ -18,10 +18,10 @@ defmodule Zone do
     receive do
       {:player_join, name, player_pid} ->
         zonename = Map.get(zone_data, :zonename)
-        Logger.info("New player #{inspect(name)} joined zone #{inspect(zone_data)}.")
         player_list = Map.get(zone_data, :playerlist)
         player_list = Map.put(player_list, name, player_pid)
         zone_data = Map.put(zone_data, :playerlist, player_list)
+        Logger.info("New player #{inspect(name)} joined zone #{inspect(zone_data)}.")
 
         send(self(), {:broadcast, "Player #{name} joined HUB"})
         loop_zone(zone_data)
