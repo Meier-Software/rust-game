@@ -7,7 +7,7 @@ use protocol::Position;
 
 use crate::{
     assets::AssetManager,
-    input::{MovementState, PLAYER_SIZE},
+    input::{MovementState, PLAYER_SIZE, WORLD_SIZE},
     map::Map,
 };
 // Animation constants
@@ -79,7 +79,7 @@ impl Player {
         }
     }
 
-    pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
+    pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
         // Store previous state
         let was_moving = self.is_moving;
         let previous_direction = self.direction;
@@ -145,23 +145,22 @@ impl Player {
             let new_y = self.pos.y + movement.dy;
 
             // Calculate the center of the player sprite for collision detection
-            let center_x = new_x + PLAYER_SIZE / 2.0;
-            let center_y = new_y + PLAYER_SIZE / 2.0;
+            let center_x = new_x + PLAYER_SIZE / 2;
+            let center_y = new_y + PLAYER_SIZE / 2;
 
             // Check horizontal movement
-            if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2.0, grid_size) {
+            if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2, grid_size) {
                 self.pos.x = new_x;
             }
 
             // Check vertical movement
-            if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2.0, center_y, grid_size) {
+            if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2, center_y, grid_size) {
                 self.pos.y = new_y;
             }
 
             // Ensure player stays within world bounds
-            const WORLD_SIZE: f32 = 800.0;
-            self.pos.x = self.pos.x.clamp(0.0, WORLD_SIZE - PLAYER_SIZE);
-            self.pos.y = self.pos.y.clamp(0.0, WORLD_SIZE - PLAYER_SIZE);
+            self.pos.x = self.pos.x.clamp(0, WORLD_SIZE - PLAYER_SIZE);
+            self.pos.y = self.pos.y.clamp(0, WORLD_SIZE - PLAYER_SIZE);
         }
     }
 
@@ -212,14 +211,14 @@ impl Player {
             let flip_x = self.direction == protocol::Facing::West;
 
             // Draw the hero sprite at the correct position
-            let mut draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
-                if flip_x { -1.0 } else { 1.0 } * PLAYER_SIZE / hero_asset.img.width() as f32,
-                PLAYER_SIZE / hero_asset.img.height() as f32,
+            let mut draw_params = DrawParam::default().dest([self.pos.x  as f32, self.pos.y as f32]).scale([
+                (if flip_x { -1 } else { 1 } * PLAYER_SIZE / hero_asset.img.width() as i32) as f32,
+                (PLAYER_SIZE / hero_asset.img.height() as i32) as f32,
             ]);
 
             // If flipping, adjust the destination to account for the flipped sprite
             if flip_x {
-                draw_params = draw_params.dest([self.pos.x + PLAYER_SIZE, self.pos.y]);
+                draw_params = draw_params.dest([(self.pos.x + PLAYER_SIZE) as f32, self.pos.y as f32]);
             }
 
             canvas.draw(&hero_asset.img, draw_params);
@@ -227,9 +226,9 @@ impl Player {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
-                let draw_params = DrawParam::default().dest([self.pos.x, self.pos.y]).scale([
-                    PLAYER_SIZE / player_asset.img.width() as f32,
-                    PLAYER_SIZE / player_asset.img.height() as f32,
+                let draw_params = DrawParam::default().dest([self.pos.x as f32, self.pos.y as f32]).scale([
+                    (PLAYER_SIZE / player_asset.img.width() as i32) as f32,
+                    (PLAYER_SIZE / player_asset.img.height() as i32) as f32,
                 ]);
                 canvas.draw(&player_asset.img, draw_params);
             } else {
@@ -259,7 +258,7 @@ impl Players {
         }
     }
 
-    pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: f32, delta_time: f32) {
+    pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
         self.self_player
             .update(movement, map, grid_size, delta_time);
     }

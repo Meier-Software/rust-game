@@ -4,16 +4,16 @@ use protocol::Facing::*;
 use protocol::Position;
 
 // Game constants
-pub const MOVEMENT_SPEED: f32 = 1.0;
+pub const MOVEMENT_SPEED: i32 = 1;
 #[allow(unused)]
-pub const WORLD_SIZE: f32 = 800.0;
-pub const PLAYER_SIZE: f32 = 16.0;
+pub const WORLD_SIZE: i32 = 800;
+pub const PLAYER_SIZE: i32 = 16;
 
 pub struct MovementState {
     pub is_moving: bool,
     pub direction: protocol::Facing,
-    pub dx: f32,
-    pub dy: f32,
+    pub dx: i32,
+    pub dy: i32,
 }
 
 // Add a struct to track key press events
@@ -36,8 +36,8 @@ pub fn handle_key_press(ctx: &Context) -> KeyPressState {
 }
 
 pub fn handle_input(ctx: &Context) -> MovementState {
-    let mut dx = 0.0;
-    let mut dy = 0.0;
+    let mut dx = 0;
+    let mut dy = 0;
     let mut direction = protocol::Facing::South;
 
     if ctx.keyboard.is_key_pressed(KeyCode::Up) || ctx.keyboard.is_key_pressed(KeyCode::W) {
@@ -57,7 +57,7 @@ pub fn handle_input(ctx: &Context) -> MovementState {
         direction = East;
     }
 
-    let is_moving = dx != 0.0 || dy != 0.0;
+    let is_moving = dx != 0 || dy != 0;
 
     MovementState {
         is_moving,
@@ -73,7 +73,7 @@ pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState) {
         let dx_int = movement.dx;
         let dy_int = movement.dy;
 
-        if dx_int != 0.0 || dy_int != 0.0 {
+        if dx_int != 0 || dy_int != 0 {
             let pos = Position::new(dx_int, dy_int);
             let move_event = protocol::ClientToServer::AttemptPlayerMove(pos);
             let _ = nc.send(move_event);

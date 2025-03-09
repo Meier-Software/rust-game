@@ -105,7 +105,7 @@ fn main() {
     );
     
     // Save the map to JSON
-    match map.to_json(output_path) {
+    match map.to_json(&output_path) {
         Ok(_) => println!("Custom map saved to {}", output_path),
         Err(e) => eprintln!("Error saving map: {}", e),
     }

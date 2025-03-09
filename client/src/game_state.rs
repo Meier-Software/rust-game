@@ -13,7 +13,7 @@ use crate::{
 };
 
 // Constants
-pub const GRID_SIZE: f32 = 16.0;
+pub const GRID_SIZE: i32 = 16;
 pub const CAMERA_ZOOM: f32 = 4.0;
 #[allow(unused)]
 pub const DIALOGUE_PADDING: f32 = 20.0;
@@ -105,7 +105,7 @@ impl GameState {
         asset_manager.debug_print_loaded_assets();
 
         // Create player at starting position
-        let start_pos = Position::new(GRID_SIZE * 1.5, GRID_SIZE * 1.5);
+        let start_pos = Position::new((GRID_SIZE as f32 * 1.5) as i32, (GRID_SIZE as f32 * 1.5) as i32);
         let players = Players::new("Player".to_string(), start_pos);
 
         Self {
@@ -349,7 +349,7 @@ impl GameState {
         // Update player position
         let delta_time = ctx.time.delta().as_secs_f32();
         self.players
-            .update(&movement, &self.map, GRID_SIZE, delta_time);
+            .update(&movement, &self.map, GRID_SIZE as i32, delta_time);
 
         // Send movement to server
         input::send_movement_to_server(&mut self.nc, &movement);
@@ -358,11 +358,11 @@ impl GameState {
         let player_pos = self.players.self_player.pos;
         if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
             // Update player position based on the door position and facing direction
-            let grid_x = door_x as f32;
-            let grid_y = door_y as f32;
+            let grid_x = door_x as i32;
+            let grid_y = door_y as i32;
             
             // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset = 1.5; // Offset by 1.5 grid cells
+            let offset = 1; // Offset by 1.5 grid cells
             
             let (x_pos, y_pos) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
@@ -399,11 +399,11 @@ impl GameState {
         let player_pos = self.players.self_player.pos;
         if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
             // Update player position based on the door position and facing direction
-            let grid_x = door_x as f32;
-            let grid_y = door_y as f32;
+            let grid_x = door_x as i32;
+            let grid_y = door_y as i32;
             
             // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset = 1.5; // Offset by 1.5 grid cells
+            let offset: i32 = 1; // Offset by 1.5 grid cells
             
             let (x_pos, y_pos) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
@@ -462,14 +462,14 @@ impl GameState {
 
         // Center the camera on the player's center (not top-left corner)
         // Add half the player size to center on the player sprite
-        let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2.0;
-        let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2.0;
+        let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2;
+        let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2;
 
-        let camera_x = player_center_x - zoomed_width / 2.0;
-        let camera_y = player_center_y - zoomed_height / 2.0;
+        let camera_x = player_center_x - zoomed_width as i32 / 2;
+        let camera_y = player_center_y - zoomed_height as i32 / 2;
 
         // Set the camera view
-        canvas.set_screen_coordinates(Rect::new(camera_x, camera_y, zoomed_width, zoomed_height));
+        canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
 
         // Draw the map first (so it's behind the player)
         self.map
@@ -489,7 +489,7 @@ impl GameState {
         canvas.draw(
             &pos_text,
             DrawParam::default()
-                .dest([camera_x + 10.0, camera_y + 10.0])
+                .dest([(camera_x + 10) as f32, (camera_y + 10) as f32])
                 .color(Color::WHITE),
         );
     }

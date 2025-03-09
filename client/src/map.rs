@@ -151,7 +151,7 @@ impl Map {
         _ctx: &Context,
         canvas: &mut graphics::Canvas,
         asset_manager: &AssetManager,
-        grid_size: f32,
+        grid_size: i32,
     ) -> GameResult<()> {
         let room = &self.rooms[self.current_room];
 
@@ -161,7 +161,7 @@ impl Map {
                 for x in 0..room.width {
                     if room.grid[y][x] == TileType::Empty || room.grid[y][x] == TileType::Door {
                         // Draw floor at this position (doors have floor underneath)
-                        let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                        let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                         canvas.draw(&floor_asset.img, graphics::DrawParam::default().dest(dest));
                     }
                 }
@@ -176,18 +176,18 @@ impl Map {
                     TileType::Wall => {
                         // Use wall_middle for regular walls
                         if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         }
                     }
                     TileType::Wall2 => {
                         // Use wall2 for the second wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall2") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size)  as f32 , (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -195,11 +195,11 @@ impl Map {
                     TileType::Wall3 => {
                         // Use wall3 for the third wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall3") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -207,11 +207,11 @@ impl Map {
                     TileType::Wall4 => {
                         // Use wall4 for the bottom wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall4") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -219,11 +219,11 @@ impl Map {
                     TileType::Wall5 => {
                         // Use wall5 for the top left corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall5") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -231,11 +231,11 @@ impl Map {
                     TileType::Wall6 => {
                         // Use wall6 for the top right corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall6") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -243,7 +243,7 @@ impl Map {
                     TileType::Door => {
                         // Draw the door
                         if let Some(door_asset) = asset_manager.get_asset("door") {
-                            let dest = [x as f32 * grid_size, y as f32 * grid_size];
+                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&door_asset.img, graphics::DrawParam::default().dest(dest));
                         }
                     }
@@ -257,7 +257,7 @@ impl Map {
             match tile_type {
                 TileType::Skull => {
                     if let Some(skull_asset) = asset_manager.get_asset("skull") {
-                        let dest = [*x as f32 * grid_size, *y as f32 * grid_size];
+                        let dest = [(*x as i32 * grid_size) as f32, (*y as i32 * grid_size) as f32];
                         canvas.draw(&skull_asset.img, graphics::DrawParam::default().dest(dest));
                     }
                 }
@@ -269,11 +269,11 @@ impl Map {
     }
 
     // Check if a position is valid (not a wall)
-    pub fn is_valid_position(&self, x: f32, y: f32, grid_size: f32) -> bool {
+    pub fn is_valid_position(&self, x: i32, y: i32, grid_size: i32) -> bool {
         let room = &self.rooms[self.current_room];
 
         // Calculate the player's hitbox corners with a slightly smaller hitbox for better collision
-        let player_half_size = crate::input::PLAYER_SIZE / 2.5; // Reduced from 2.0 to 2.5 for tighter collision
+        let player_half_size = crate::input::PLAYER_SIZE / 2; // Reduced from 2.0 to 2.5 for tighter collision
 
         // Check all four corners of the player's hitbox
         let corners = [
@@ -312,9 +312,9 @@ impl Map {
     // Check if player is on a door tile and handle room transition
     pub fn check_door_transition(
         &mut self,
-        x: f32,
-        y: f32,
-        grid_size: f32,
+        x: i32,
+        y: i32,
+        grid_size: i32,
     ) -> Option<(usize, usize, Facing)> {
         // Calculate the grid position of the player's center
         let center_x = (x / grid_size) as usize;
