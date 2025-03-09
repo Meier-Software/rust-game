@@ -329,35 +329,53 @@ impl Map {
             if *door_x == center_x && *door_y == center_y && self.current_room != *dest_room {
                 // Transition to the destination room
                 let prev_room = self.current_room;
-                self.current_room = *dest_room;
-
+                let new_room = *dest_room;
+                
+                log::info!("Door transition from room {} to room {}", prev_room, new_room);
+                
                 // Find the corresponding door in the destination room
                 for (other_door_x, other_door_y, other_dest_room) in &self.doors {
-                    if *other_dest_room == prev_room && *dest_room == self.current_room {
+                    if *other_dest_room == prev_room && new_room == self.current_room {
                         // Determine the direction to offset the player from the door
                         // This prevents the player from immediately triggering the door again
                         use protocol::Facing::*;
-                        let direction = if *other_door_y == 1 {
+                        
+                        // Calculate the position of the door relative to the room boundaries
+                        let is_top_edge = *other_door_y <= 1;
+                        let is_bottom_edge = *other_door_y >= self.rooms[new_room].height - 2;
+                        let is_left_edge = *other_door_x <= 1;
+                        let is_right_edge = *other_door_x >= self.rooms[new_room].width - 2;
+                        
+                        let direction = if is_top_edge {
                             // Door is at the top of the room, move player down
                             South
-                        } else if *other_door_y == self.rooms[self.current_room].height - 2 {
+                        } else if is_bottom_edge {
                             // Door is at the bottom of the room, move player up
                             North
-                        } else if *other_door_x == 1 {
+                        } else if is_left_edge {
                             // Door is at the left of the room, move player right
                             East
-                        } else if *other_door_x == self.rooms[self.current_room].width - 2 {
+                        } else if is_right_edge {
                             // Door is at the right of the room, move player left
                             West
                         } else {
                             // Default direction if door position is ambiguous
                             South
                         };
+                        
+                        log::info!("Found matching door at ({}, {}) in room {}, moving player {:?}", 
+                                  other_door_x, other_door_y, new_room, direction);
 
-                        // Return the position of the door in the new room and the direction to offset
-                        return Some((*dest_room, *other_door_x, *other_door_y, direction));
+                        // Return the new room, door position, and direction to offset
+                        return Some((new_room, *other_door_x, *other_door_y, direction));
                     }
                 }
+                
+                // If we didn't find a matching door, just place the player at a safe position in the new room
+                log::warn!("No matching door found in destination room, using default position");
+                let safe_x = self.rooms[new_room].width / 2;
+                let safe_y = self.rooms[new_room].height / 2;
+                return Some((new_room, safe_x, safe_y, Facing::South));
             }
         }
 

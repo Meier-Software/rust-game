@@ -209,22 +209,25 @@ impl Player {
             // Since we're using the same sprites for both left and right, we need to flip the left-facing ones
             let flip_x = self.direction == protocol::Facing::West;
 
-            // Use a larger scale factor to make the sprite more visible
-            // Original calculation: PLAYER_SIZE / hero_asset.img.width() as i32
-            // New calculation: Use a fixed scale factor of 3.0 to make the sprite larger
-            let scale_factor = 3.0;
+            // Use a smaller scale factor to make the sprite half the size
+            let scale_factor = 0.75;
             
             // Draw the hero sprite at the correct position
             let mut draw_params = graphics::DrawParam::default()
-                .dest([self.pos.x as f32, self.pos.y as f32])
-                .scale([
-                    (if flip_x { -1.0 } else { 1.0 }) * scale_factor,
-                    scale_factor,
-                ]);
-
-            // If flipping, adjust the destination to account for the flipped sprite
+                .dest([self.pos.x as f32, self.pos.y as f32]);
+                
+            // Apply scaling
             if flip_x {
-                draw_params = draw_params.dest([(self.pos.x + PLAYER_SIZE) as f32, self.pos.y as f32]);
+                // For flipped sprites, we need to adjust the destination point
+                // First calculate the width of the scaled sprite
+                let scaled_width = hero_asset.img.width() as f32 * scale_factor;
+                
+                // Set the destination to account for the flipped sprite
+                draw_params = draw_params
+                    .dest([self.pos.x as f32 + scaled_width, self.pos.y as f32])
+                    .scale([scale_factor * -1.0, scale_factor]);
+            } else {
+                draw_params = draw_params.scale([scale_factor, scale_factor]);
             }
 
             canvas.draw(&hero_asset.img, draw_params);
@@ -238,8 +241,8 @@ impl Player {
                 log::info!("Found fallback asset: {} with dimensions {}x{}", 
                           fallback_asset, player_asset.img.width(), player_asset.img.height());
                 
-                // Use a larger scale factor for the fallback sprite as well
-                let scale_factor = 3.0;
+                // Use a smaller scale factor for the fallback sprite as well
+                let scale_factor = 0.75;
                 
                 let draw_params = graphics::DrawParam::default()
                     .dest([self.pos.x as f32, self.pos.y as f32])
@@ -260,11 +263,13 @@ impl Player {
                 };
                 
                 // Draw a simple rectangle using the canvas's rectangle drawing method
+                // Make the rectangle half the size as well
+                let rect_size = PLAYER_SIZE as f32 * 0.75;
                 canvas.draw(
                     &graphics::Quad,
                     graphics::DrawParam::default()
                         .dest([self.pos.x as f32, self.pos.y as f32])
-                        .scale([PLAYER_SIZE as f32, PLAYER_SIZE as f32])
+                        .scale([rect_size, rect_size])
                         .color(color)
                 );
                 

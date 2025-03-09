@@ -14,7 +14,7 @@ use crate::{
 
 // Constants
 pub const GRID_SIZE: i32 = 16;
-pub const CAMERA_ZOOM: f32 = 2.0;
+pub const CAMERA_ZOOM: f32 = 3.5;
 #[allow(unused)]
 pub const DIALOGUE_PADDING: f32 = 20.0;
 #[allow(unused)]
@@ -350,14 +350,17 @@ impl GameState {
         // Check for door transitions
         let player_pos = self.players.self_player.pos;
         if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
-            // Update player position based on the door position and facing direction
+            // Update the current room
+            self.map.current_room = new_room;
+            
+            // Calculate the new position based on the door and facing direction
             let grid_x = door_x as i32;
             let grid_y = door_y as i32;
             
-            // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset: i32 = 1; // Offset by 1 grid cells
+            // Apply a larger offset to ensure the player doesn't get stuck in the door
+            let offset = 2; // Use 2 grid cells of offset to prevent re-triggering
             
-            let (x_pos, y_pos) = match facing {
+            let (new_x, new_y) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
                 protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
                 protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
@@ -365,12 +368,11 @@ impl GameState {
             };
             
             // Update player position and direction
-            self.players.self_player.pos.x = x_pos;
-            self.players.self_player.pos.y = y_pos;
+            self.players.self_player.pos.x = new_x;
+            self.players.self_player.pos.y = new_y;
             self.players.self_player.direction = facing;
             
-            // Update current room
-            self.map.current_room = new_room;
+            log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
         }
     }
 
@@ -402,15 +404,15 @@ impl GameState {
             self.players.self_player.pos.y,
             GRID_SIZE,
         ) {
-            // Transition to the new room
+            // Update the current room
             self.map.current_room = new_room;
             
-            // Calculate new position based on door position and facing
+            // Calculate the new position based on the door and facing direction
             let grid_x = door_x as i32;
             let grid_y = door_y as i32;
             
-            // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset = 1; // Offset by 1 grid cell
+            // Apply a larger offset to ensure the player doesn't get stuck in the door
+            let offset = 2; // Use 2 grid cells of offset to prevent re-triggering
             
             let (new_x, new_y) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
@@ -419,10 +421,12 @@ impl GameState {
                 protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
             };
             
-            // Update player position
+            // Update player position and direction
             self.players.self_player.pos.x = new_x;
             self.players.self_player.pos.y = new_y;
             self.players.self_player.direction = facing;
+            
+            log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
         }
     }
 
