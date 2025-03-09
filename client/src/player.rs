@@ -1,9 +1,8 @@
 use ggez::{
+    graphics,
     GameResult,
-    graphics::{self, DrawParam},
 };
-use protocol::Facing;
-use protocol::Position;
+use protocol::{Facing, Position};
 
 use crate::{
     assets::AssetManager,
@@ -199,22 +198,29 @@ impl Player {
             }
         };
 
-        // Debug print the asset name when in idle animation
-        if self.is_in_idle_animation {
-            log::trace!("Using idle animation asset: {}", asset_name);
-        }
+        log::info!("Trying to draw player with asset: {}", asset_name);
 
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
+            log::info!("Found hero asset: {} with dimensions {}x{}", 
+                      asset_name, hero_asset.img.width(), hero_asset.img.height());
+            
             // Determine if we need to flip the sprite horizontally for left-facing sprites
             // Since we're using the same sprites for both left and right, we need to flip the left-facing ones
             let flip_x = self.direction == protocol::Facing::West;
 
+            // Use a larger scale factor to make the sprite more visible
+            // Original calculation: PLAYER_SIZE / hero_asset.img.width() as i32
+            // New calculation: Use a fixed scale factor of 3.0 to make the sprite larger
+            let scale_factor = 3.0;
+            
             // Draw the hero sprite at the correct position
-            let mut draw_params = DrawParam::default().dest([self.pos.x  as f32, self.pos.y as f32]).scale([
-                (if flip_x { -1 } else { 1 } * PLAYER_SIZE / hero_asset.img.width() as i32) as f32,
-                (PLAYER_SIZE / hero_asset.img.height() as i32) as f32,
-            ]);
+            let mut draw_params = graphics::DrawParam::default()
+                .dest([self.pos.x as f32, self.pos.y as f32])
+                .scale([
+                    (if flip_x { -1.0 } else { 1.0 }) * scale_factor,
+                    scale_factor,
+                ]);
 
             // If flipping, adjust the destination to account for the flipped sprite
             if flip_x {
@@ -222,17 +228,47 @@ impl Player {
             }
 
             canvas.draw(&hero_asset.img, draw_params);
+            log::info!("Drew player sprite at ({}, {})", self.pos.x, self.pos.y);
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
+            log::info!("Asset {} not found, trying fallback: {}", asset_name, fallback_asset);
+            
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
-                let draw_params = DrawParam::default().dest([self.pos.x as f32, self.pos.y as f32]).scale([
-                    (PLAYER_SIZE / player_asset.img.width() as i32) as f32,
-                    (PLAYER_SIZE / player_asset.img.height() as i32) as f32,
-                ]);
+                log::info!("Found fallback asset: {} with dimensions {}x{}", 
+                          fallback_asset, player_asset.img.width(), player_asset.img.height());
+                
+                // Use a larger scale factor for the fallback sprite as well
+                let scale_factor = 3.0;
+                
+                let draw_params = graphics::DrawParam::default()
+                    .dest([self.pos.x as f32, self.pos.y as f32])
+                    .scale([scale_factor, scale_factor]);
+                    
                 canvas.draw(&player_asset.img, draw_params);
+                log::info!("Drew fallback player sprite at ({}, {})", self.pos.x, self.pos.y);
             } else {
-                log::warn!("Could not find asset for player: {}", asset_name);
+                log::warn!("Could not find asset for player: {} or fallback: {}", asset_name, fallback_asset);
+                
+                // Draw a colored rectangle as a fallback to make the player visible
+                let color = match self.character_type {
+                    CharacterType::Knight => graphics::Color::RED,
+                    CharacterType::Archer => graphics::Color::GREEN,
+                    CharacterType::Elf => graphics::Color::BLUE,
+                    CharacterType::Lizard => graphics::Color::YELLOW,
+                    CharacterType::Wizard => graphics::Color::MAGENTA,
+                };
+                
+                // Draw a simple rectangle using the canvas's rectangle drawing method
+                canvas.draw(
+                    &graphics::Quad,
+                    graphics::DrawParam::default()
+                        .dest([self.pos.x as f32, self.pos.y as f32])
+                        .scale([PLAYER_SIZE as f32, PLAYER_SIZE as f32])
+                        .color(color)
+                );
+                
+                log::info!("Drew colored rectangle for player at ({}, {})", self.pos.x, self.pos.y);
             }
         }
 

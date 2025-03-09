@@ -14,7 +14,7 @@ use crate::{
 
 // Constants
 pub const GRID_SIZE: i32 = 16;
-pub const CAMERA_ZOOM: f32 = 4.0;
+pub const CAMERA_ZOOM: f32 = 2.0;
 #[allow(unused)]
 pub const DIALOGUE_PADDING: f32 = 20.0;
 #[allow(unused)]
@@ -106,6 +106,7 @@ impl GameState {
 
         // Create player at starting position
         let start_pos = Position::new((GRID_SIZE as f32 * 1.5) as i32, (GRID_SIZE as f32 * 1.5) as i32);
+        log::info!("Creating player at starting position: ({}, {})", start_pos.x, start_pos.y);
         let players = Players::new("Player".to_string(), start_pos);
 
         Self {
@@ -137,47 +138,58 @@ impl GameState {
             "/sprites/Files/Assets/Heroes/{}/{}_{}",
             character, character, gender
         );
+        
+        log::info!("Loading character assets for {} from path: {}", character, character_path);
 
         // Load idle animations
+        let idle_down_path = format!(
+            "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+            character_path,
+            character.to_lowercase(),
+            gender.to_lowercase(),
+            character.to_lowercase(),
+            gender.to_lowercase()
+        );
+        log::info!("Loading idle down animation from: {}", idle_down_path);
+        
         asset_manager.load_asset(
             ctx,
             &format!("{}_idle_down", character),
-            &format!(
-                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
-                character_path,
-                character.to_lowercase(),
-                gender.to_lowercase(),
-                character.to_lowercase(),
-                gender.to_lowercase()
-            ),
+            &idle_down_path,
         )?;
 
+        let idle_up_path = format!(
+            "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+            character_path,
+            character.to_lowercase(),
+            gender.to_lowercase(),
+            character.to_lowercase(),
+            gender.to_lowercase()
+        );
+        log::info!("Loading idle up animation from: {}", idle_up_path);
+        
         asset_manager.load_asset(
             ctx,
             &format!("{}_idle_up", character),
-            &format!(
-                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
-                character_path,
-                character.to_lowercase(),
-                gender.to_lowercase(),
-                character.to_lowercase(),
-                gender.to_lowercase()
-            ),
+            &idle_up_path,
         )?;
 
+        let idle_right_path = format!(
+            "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+            character_path,
+            character.to_lowercase(),
+            gender.to_lowercase(),
+            character.to_lowercase(),
+            gender.to_lowercase()
+        );
+        log::info!("Loading idle right animation from: {}", idle_right_path);
+        
         asset_manager.load_asset(
             ctx,
             &format!("{}_idle_right", character),
-            &format!(
-                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
-                character_path,
-                character.to_lowercase(),
-                gender.to_lowercase(),
-                character.to_lowercase(),
-                gender.to_lowercase()
-            ),
+            &idle_right_path,
         )?;
-        
+
         // Add left-facing idle animation (using the same sprite as right for now)
         asset_manager.load_asset(
             ctx,
@@ -319,50 +331,31 @@ impl GameState {
     }
 
     fn update_in_game(&mut self, ctx: &Context) {
-        // Check for server messages
-        let line = self.nc.recv();
-        use crate::net::NCError::*;
-        match line {
-            Ok(ok) => log::trace!("{}", ok),
-            Err(err) => match err {
-                NoNewData => {
-                    log::trace!("No new data.")
-                }
-                ConnectionError(e) => {
-                    log::error!("Connection error: {}", e);
-                }
-                SendError => {
-                    log::error!("some send error");
-                }
-            },
-        }
-
-        // Handle movement input
+        // Get input
         let movement = input::handle_input(ctx);
-
-        // Handle key press events
-        let key_press = handle_key_press(ctx);
-        if key_press.switch_character {
-            self.players.switch_character();
-        }
-
-        // Update player position
-        let delta_time = ctx.time.delta().as_secs_f32();
-        self.players
-            .update(&movement, &self.map, GRID_SIZE as i32, delta_time);
+        let key_press = input::handle_key_press(ctx);
 
         // Send movement to server
         input::send_movement_to_server(&mut self.nc, &movement);
 
+        // Update player position
+        let delta_time = ctx.time.delta().as_secs_f32();
+        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+
+        // Handle character switching
+        if key_press.switch_character {
+            self.players.switch_character();
+        }
+
         // Check for door transitions
         let player_pos = self.players.self_player.pos;
-        if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
+        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
             // Update player position based on the door position and facing direction
             let grid_x = door_x as i32;
             let grid_y = door_y as i32;
             
             // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset = 1; // Offset by 1.5 grid cells
+            let offset: i32 = 1; // Offset by 1 grid cells
             
             let (x_pos, y_pos) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
@@ -375,46 +368,60 @@ impl GameState {
             self.players.self_player.pos.x = x_pos;
             self.players.self_player.pos.y = y_pos;
             self.players.self_player.direction = facing;
+            
+            // Update current room
+            self.map.current_room = new_room;
         }
     }
 
     fn update_offline(&mut self, ctx: &Context) {
-        // In offline mode, we handle input and update the game state directly
-        // without communicating with the server
-        
-        // Get input
+        // Handle input
         let movement = input::handle_input(ctx);
         let key_press = input::handle_key_press(ctx);
-        
+
         // Update player position
         let delta_time = ctx.time.delta().as_secs_f32();
         self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
-        
-        // Handle character switching
+
+        // Log player position for debugging
+        log::info!(
+            "Player position: ({}, {}), Room: {}", 
+            self.players.self_player.pos.x, 
+            self.players.self_player.pos.y,
+            self.map.current_room
+        );
+
+        // Check for character switch
         if key_press.switch_character {
             self.players.switch_character();
         }
-        
+
         // Check for door transitions
-        let player_pos = self.players.self_player.pos;
-        if let Some((door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
-            // Update player position based on the door position and facing direction
+        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(
+            self.players.self_player.pos.x,
+            self.players.self_player.pos.y,
+            GRID_SIZE,
+        ) {
+            // Transition to the new room
+            self.map.current_room = new_room;
+            
+            // Calculate new position based on door position and facing
             let grid_x = door_x as i32;
             let grid_y = door_y as i32;
             
             // Apply offset based on facing direction to prevent immediate re-triggering
-            let offset: i32 = 1; // Offset by 1.5 grid cells
+            let offset = 1; // Offset by 1 grid cell
             
-            let (x_pos, y_pos) = match facing {
+            let (new_x, new_y) = match facing {
                 protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
                 protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
                 protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
                 protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
             };
             
-            // Update player position and direction
-            self.players.self_player.pos.x = x_pos;
-            self.players.self_player.pos.y = y_pos;
+            // Update player position
+            self.players.self_player.pos.x = new_x;
+            self.players.self_player.pos.y = new_y;
             self.players.self_player.direction = facing;
         }
     }

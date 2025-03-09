@@ -24,8 +24,13 @@ impl AssetManager {
     }
 
     pub fn load_asset(&mut self, ctx: &mut Context, name: &str, path: &str) -> GameResult<()> {
+        log::debug!("Loading asset '{}' from path '{}'", name, path);
+        
         let img = match Image::from_path(ctx, path) {
-            Ok(img) => img,
+            Ok(img) => {
+                log::debug!("Successfully loaded image for '{}', dimensions: {}x{}", name, img.width(), img.height());
+                img
+            },
             Err(e) => {
                 // Try alternative path if the first one fails
                 let alt_path = if path.starts_with("/") {
@@ -34,16 +39,28 @@ impl AssetManager {
                     path
                 };
 
-                println!(
+                log::warn!(
                     "Failed to load asset from {}: {}. Trying {}",
                     path, e, alt_path
                 );
-                Image::from_path(ctx, alt_path)?
+                
+                match Image::from_path(ctx, alt_path) {
+                    Ok(img) => {
+                        log::debug!("Successfully loaded image from alternative path for '{}', dimensions: {}x{}", 
+                                   name, img.width(), img.height());
+                        img
+                    },
+                    Err(e) => {
+                        log::error!("Failed to load asset from alternative path {}: {}", alt_path, e);
+                        return Err(e);
+                    }
+                }
             }
         };
 
         let asset = Asset::new(img);
         self.assets.insert(name.to_string(), asset);
+        log::debug!("Asset '{}' successfully added to asset manager", name);
         Ok(())
     }
 

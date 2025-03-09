@@ -154,6 +154,7 @@ impl Map {
         grid_size: i32,
     ) -> GameResult<()> {
         let room = &self.rooms[self.current_room];
+        log::debug!("Drawing map for room {} with dimensions {}x{}", self.current_room, room.width, room.height);
 
         // First draw floor tiles for all cells
         if let Some(floor_asset) = asset_manager.get_asset("floor") {
@@ -166,6 +167,9 @@ impl Map {
                     }
                 }
             }
+            log::debug!("Drew floor tiles");
+        } else {
+            log::warn!("Floor asset not found");
         }
 
         // Then draw wall tiles and doors on top
@@ -315,7 +319,7 @@ impl Map {
         x: i32,
         y: i32,
         grid_size: i32,
-    ) -> Option<(usize, usize, Facing)> {
+    ) -> Option<(usize, usize, usize, Facing)> {
         // Calculate the grid position of the player's center
         let center_x = (x / grid_size) as usize;
         let center_y = (y / grid_size) as usize;
@@ -351,7 +355,7 @@ impl Map {
                         };
 
                         // Return the position of the door in the new room and the direction to offset
-                        return Some((*other_door_x, *other_door_y, direction));
+                        return Some((*dest_room, *other_door_x, *other_door_y, direction));
                     }
                 }
             }
