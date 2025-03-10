@@ -1,5 +1,6 @@
 use ggez::{
-    graphics,
+    Context,
+    graphics::{self, Drawable},
     GameResult,
 };
 use protocol::{Facing, Position};
