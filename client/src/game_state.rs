@@ -511,7 +511,7 @@ impl GameState {
             let key_press = input::handle_key_press(ctx);
 
             // Send movement to server
-            input::send_movement_to_server(&mut self.nc, &movement, &self.username);
+            input::send_movement_to_server(&mut self.nc, &movement, &self.username, &self.players.self_player.pos);
 
             // Update player position
             let delta_time = ctx.time.delta().as_secs_f32();
@@ -558,12 +558,18 @@ impl GameState {
         let facing_msg = format!("face {}\r\n", self.players.self_player.direction);
         let _ = self.nc.send_str(facing_msg);
         
-        // Send current position
-        let move_msg = format!("move {} {}\r\n", 
+        // Send absolute position
+        let move_msg = format!("pos {} {}\r\n", 
             self.players.self_player.pos.x, 
             self.players.self_player.pos.y
         );
         let _ = self.nc.send_str(move_msg);
+        
+        // Log the position being sent
+        log::info!("Sending absolute position: ({}, {})", 
+            self.players.self_player.pos.x, 
+            self.players.self_player.pos.y
+        );
     }
 
     // Method to process network messages for other players

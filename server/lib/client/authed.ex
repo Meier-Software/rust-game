@@ -47,6 +47,10 @@ defmodule Client.Authed do
         send(player_pid, {:move, x, y, self()})
         "Moved x#{inspect(x)} y#{inspect(y)}"
 
+      ["pos", x, y] ->
+        send(player_pid, {:move, x, y, self()})
+        "Position set to x#{inspect(x)} y#{inspect(y)}"
+
       ["face", dir] ->
         send(player_pid, {:facing, dir, self()})
         "Facing " <> dir

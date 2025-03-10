@@ -51,7 +51,7 @@ impl ClientToServer {
     pub fn as_line(&self) -> String {
         use ClientToServer::*;
         let line = match self {
-            AttemptPlayerMove(position) => format!("move {} {}\r\n", position.x, position.y),
+            AttemptPlayerMove(position) => format!("pos {} {}\r\n", position.x, position.y),
             AttemptPlayerFacingChange(facing) => format!("face {}\r\n", facing),
             Register(username, password) => format!("register {} {}\r\n", username, password),
             Login(username, password) => format!("login {} {}\r\n", username, password),

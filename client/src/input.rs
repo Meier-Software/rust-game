@@ -69,7 +69,7 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
 }
 
-pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str) {
+pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str, player_pos: &protocol::Position) {
     // Always send the username for identification
     let username_msg = format!("username {}\r\n", username);
     let _ = nc.send_str(username_msg);
@@ -80,8 +80,8 @@ pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, use
     
     // Only send movement if actually moving
     if movement.is_moving {
-        // Send movement as a string in the format the server expects
-        let move_msg = format!("move {} {}\r\n", movement.dx, movement.dy);
+        // Send absolute position instead of relative movement
+        let move_msg = format!("pos {} {}\r\n", player_pos.x, player_pos.y);
         let _ = nc.send_str(move_msg);
     }
 }
