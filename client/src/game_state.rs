@@ -111,21 +111,17 @@ impl GameState {
         log::info!("Creating player at starting position: ({}, {})", start_pos.x, start_pos.y);
         let players = Players::new("Player".to_string(), start_pos);
 
-        // For testing purposes, always start in InGame or Offline stage
-        let stage = if offline_mode {
-            Stage::Offline
-        } else {
-            // Send registration/login command if online
-            let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
-            let _ = nc.send(event);
-            // Wait a bit for server response
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            // Start directly in InGame stage for testing
-            Stage::InGame
-        };
-
         Self {
-            stage,
+            stage: if offline_mode { 
+                Stage::Offline 
+            } else { 
+                // Send registration/login command if online
+                let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+                let _ = nc.send(event);
+                // Wait a bit for server response
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                Stage::PreAuth 
+            },
             nc,
             asset_manager,
             players,
@@ -300,18 +296,16 @@ impl GameState {
     }
 
     pub fn update(&mut self, ctx: &Context) -> GameResult<()> {
-        use Stage::*;
         match self.stage {
-            PreAuth => self.update_pre_auth(),
-            InMenu => {}
-            InGame => self.update_in_game(ctx),
-            Offline => self.update_offline(ctx),
+            Stage::PreAuth => self.update_pre_auth(ctx),
+            Stage::InGame => self.update_in_game(ctx),
+            Stage::Offline => self.update_offline(ctx),
+            _ => {}
         }
-
         Ok(())
     }
 
-    fn update_pre_auth(&mut self) {
+    fn update_pre_auth(&mut self, ctx: &Context) {
         // Handle authentication
         let line = self.nc.recv();
         use crate::net::NCError::*;
@@ -325,7 +319,20 @@ impl GameState {
                 }
             }
             Err(err) => match err {
-                NoNewData => {}
+                NoNewData => {
+                    // Auto-login for testing purposes
+                    // This will automatically try to login after a short delay
+                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
+                    unsafe {
+                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
+                        if AUTO_LOGIN_TIMER > 2.0 {
+                            AUTO_LOGIN_TIMER = 0.0;
+                            log::info!("Auto-login: Sending login command");
+                            let event = ClientToServer::Register("test_user".to_string(), "password".to_string());
+                            let _ = self.nc.send(event);
+                        }
+                    }
+                }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
                 }
