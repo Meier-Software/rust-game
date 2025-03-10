@@ -19,6 +19,7 @@ defmodule Client.Authed do
     case cmds do
       ["logout"] ->
         Logger.info("Client logged out.")
+        Process.exit(player_pid, "signed out.")
         Client.repeat_start(client_socket)
 
       ["quit"] ->

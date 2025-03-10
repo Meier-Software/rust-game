@@ -31,12 +31,7 @@ defmodule Server do
 
     Logger.info("Running the Database service at #{inspect(db_pid)}")
 
-    loop_coordinator()
-  end
-
-  def loop_coordinator() do
-    # TODO: watchdog the services.
-    loop_coordinator()
+    Process.exit(self(), "Start up finished.")
   end
 
   def recompile() do

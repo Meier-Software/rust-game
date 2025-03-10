@@ -13,6 +13,8 @@ defmodule Server.Application do
       {Task.Supervisor, name: Server.Services.ZoneManager},
       {Task.Supervisor, name: Server.Clients},
       {Task.Supervisor, name: Server.Players},
+      {Task.Supervisor, name: Server.Zones},
+
 
       # Starts a worker by calling: Server.Worker.start_link(arg)
       # {Server.Worker, arg}
