@@ -24,6 +24,21 @@ defmodule Zone do
         Logger.info("New player #{inspect(name)} joined zone #{inspect(zone_data)}.")
 
         send(self(), {:broadcast, "Player #{name} joined HUB"})
+        
+        # Also broadcast player_joined with position information
+        send(self(), {:broadcast_player_joined, name, 0, 0, "South"})
+        
+        loop_zone(zone_data)
+        
+      {:player_moved, username, x, y, facing} ->
+        Logger.info("Player #{username} moved to (#{x}, #{y}) facing #{facing}")
+        player_list = Map.get(zone_data, :playerlist)
+        
+        # Broadcast to all players except the one who moved
+        for {k, player_pid} <- player_list, k != username do
+          send(player_pid, {:client_send, "player_moved #{x} #{y} #{facing}"})
+        end
+        
         loop_zone(zone_data)
 
       {:broadcast, line} ->
@@ -35,6 +50,17 @@ defmodule Zone do
           send(player_pid, {:client_send, line})
         end
 
+        loop_zone(zone_data)
+        
+      {:broadcast_player_joined, username, x, y, facing} ->
+        Logger.info("Broadcasting player joined: #{username} at (#{x}, #{y}) facing #{facing}")
+        player_list = Map.get(zone_data, :playerlist)
+        
+        # Broadcast to all players except the one who joined
+        for {k, player_pid} <- player_list, k != username do
+          send(player_pid, {:client_send, "player_joined #{x} #{y} #{facing}"})
+        end
+        
         loop_zone(zone_data)
     after
       0 ->

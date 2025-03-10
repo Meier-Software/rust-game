@@ -30,6 +30,9 @@ impl std::fmt::Display for Facing {
 
 pub enum ServerToClient {
     EntityMoved(Position),
+    PlayerJoined(String, Position, Facing),
+    PlayerLeft(String),
+    PlayerMoved(String, Position, Facing),
 }
 
 #[derive(Debug)]

@@ -1,15 +1,18 @@
 use ggez::{
     Context, GameResult,
     graphics::{self, Color, DrawParam, Rect, Text},
+    input::keyboard::KeyCode,
 };
 use protocol::{ClientToServer, Position};
 
 use crate::{
     assets::AssetManager,
+    filter::Filters,
     input::{self, handle_key_press},
     map::Map,
+    net::NCError,
     net::NetClient,
-    player::Players,
+    player::{Player, Players},
 };
 
 // Constants
@@ -294,18 +297,23 @@ impl GameState {
     }
 
     pub fn update(&mut self, ctx: &Context) -> GameResult<()> {
-        use Stage::*;
         match self.stage {
-            PreAuth => self.update_pre_auth(),
-            InMenu => {}
-            InGame => self.update_in_game(ctx),
-            Offline => self.update_offline(ctx),
+            Stage::PreAuth => self.update_pre_auth(ctx),
+            Stage::InGame => self.update_in_game(ctx),
+            Stage::Offline => self.update_offline(ctx),
+            _ => {}
         }
-
         Ok(())
     }
 
-    fn update_pre_auth(&mut self) {
+    fn update_pre_auth(&mut self, ctx: &Context) {
+        // Check for keyboard input to register
+        if ctx.keyboard.is_key_just_pressed(KeyCode::R) {
+            log::info!("Manual registration: Sending register command for 'xyz' with password '123'");
+            let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+            let _ = self.nc.send(event);
+        }
+        
         // Handle authentication
         let line = self.nc.recv();
         use crate::net::NCError::*;
@@ -319,7 +327,20 @@ impl GameState {
                 }
             }
             Err(err) => match err {
-                NoNewData => {}
+                NoNewData => {
+                    // Auto-login for testing purposes
+                    // This will automatically try to login after a short delay
+                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
+                    unsafe {
+                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
+                        if AUTO_LOGIN_TIMER > 2.0 {
+                            AUTO_LOGIN_TIMER = 0.0;
+                            log::info!("Auto-login: Sending login command");
+                            let event = ClientToServer::Register("test_user".to_string(), "password".to_string());
+                            let _ = self.nc.send(event);
+                        }
+                    }
+                }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
                 }
@@ -374,6 +395,51 @@ impl GameState {
             
             log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
         }
+        
+        // Handle network messages for other players
+        self.process_network_messages();
+    }
+
+    // New method to process network messages for other players
+    fn process_network_messages(&mut self) {
+        // Only process messages if we're not in offline mode
+        if self.nc.is_offline() {
+            return;
+        }
+        
+        // Try to receive a message from the server
+        match self.nc.recv() {
+            Ok(message) => {
+                log::info!("Received message from server: {}", message);
+                
+                // Parse the message to see if it's a player update
+                if let Some(server_message) = self.nc.parse_server_message(&message) {
+                    match server_message {
+                        protocol::ServerToClient::PlayerJoined(username, position, facing) => {
+                            log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
+                            self.players.add_or_update_player(username, position, facing);
+                        },
+                        protocol::ServerToClient::PlayerLeft(username) => {
+                            log::info!("Player left: {}", username);
+                            self.players.remove_player(&username);
+                        },
+                        protocol::ServerToClient::PlayerMoved(username, position, facing) => {
+                            log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
+                            self.players.update_player_position(&username, position, facing);
+                        },
+                        _ => {
+                            // Handle other message types if needed
+                        }
+                    }
+                }
+            },
+            Err(NCError::NoNewData) => {
+                // No new data, this is normal
+            },
+            Err(e) => {
+                log::warn!("Error receiving from server: {:?}", e);
+            }
+        }
     }
 
     fn update_offline(&mut self, ctx: &Context) {
@@ -385,25 +451,14 @@ impl GameState {
         let delta_time = ctx.time.delta().as_secs_f32();
         self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
 
-        // Log player position for debugging
-        log::info!(
-            "Player position: ({}, {}), Room: {}", 
-            self.players.self_player.pos.x, 
-            self.players.self_player.pos.y,
-            self.map.current_room
-        );
-
-        // Check for character switch
+        // Handle character switching
         if key_press.switch_character {
             self.players.switch_character();
         }
 
         // Check for door transitions
-        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(
-            self.players.self_player.pos.x,
-            self.players.self_player.pos.y,
-            GRID_SIZE,
-        ) {
+        let player_pos = self.players.self_player.pos;
+        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
             // Update the current room
             self.map.current_room = new_room;
             
@@ -428,6 +483,75 @@ impl GameState {
             
             log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
         }
+        
+        // In offline mode, we can simulate other players for testing
+        self.simulate_other_players(delta_time);
+    }
+    
+    // New method to simulate other players in offline mode
+    fn simulate_other_players(&mut self, delta_time: f32) {
+        // Only add simulated players if we don't have any yet
+        if self.players.other_players.is_empty() {
+            // Add a simulated player that moves around
+            let start_pos = protocol::Position::new(
+                (GRID_SIZE as f32 * 3.5) as i32, 
+                (GRID_SIZE as f32 * 3.5) as i32
+            );
+            self.players.add_or_update_player("SimPlayer".to_string(), start_pos, protocol::Facing::South);
+            
+            // Add another simulated player that stays still
+            let start_pos2 = protocol::Position::new(
+                (GRID_SIZE as f32 * 5.5) as i32, 
+                (GRID_SIZE as f32 * 2.5) as i32
+            );
+            self.players.add_or_update_player("StaticPlayer".to_string(), start_pos2, protocol::Facing::East);
+        }
+        
+        // Make the simulated player move in a pattern
+        static mut MOVE_TIMER: f32 = 0.0;
+        static mut DIRECTION: i32 = 0;
+        
+        unsafe {
+            MOVE_TIMER += delta_time;
+            
+            // Change direction every 2 seconds
+            if MOVE_TIMER > 2.0 {
+                MOVE_TIMER = 0.0;
+                DIRECTION = (DIRECTION + 1) % 4;
+                
+                // Find the simulated player
+                for player in &mut self.players.other_players {
+                    if player.name == "SimPlayer" {
+                        // Update the direction
+                        player.direction = match DIRECTION {
+                            0 => protocol::Facing::North,
+                            1 => protocol::Facing::East,
+                            2 => protocol::Facing::South,
+                            3 => protocol::Facing::West,
+                            _ => protocol::Facing::South,
+                        };
+                        
+                        // Move the player in that direction
+                        let (dx, dy) = match player.direction {
+                            protocol::Facing::North => (0, -1),
+                            protocol::Facing::East => (1, 0),
+                            protocol::Facing::South => (0, 1),
+                            protocol::Facing::West => (-1, 0),
+                        };
+                        
+                        player.pos.x += dx * GRID_SIZE;
+                        player.pos.y += dy * GRID_SIZE;
+                        player.is_moving = true;
+                        
+                        // Keep the player within bounds
+                        player.pos.x = player.pos.x.max(GRID_SIZE).min(GRID_SIZE * 10);
+                        player.pos.y = player.pos.y.max(GRID_SIZE).min(GRID_SIZE * 10);
+                        
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
@@ -451,16 +575,37 @@ impl GameState {
     }
 
     fn draw_pre_auth(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
-        // Draw login/authentication screen
+        // Draw a simple login screen
         let screen_width = ctx.gfx.window().inner_size().width as f32;
         let screen_height = ctx.gfx.window().inner_size().height as f32;
 
-        // Draw text for login screen
-        let text = Text::new("Authenticating...");
-        let text_pos = [screen_width / 2.0 - 50.0, screen_height / 2.0];
+        // Set screen coordinates for UI elements
+        canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+
+        // Draw background
+        let bg_color = Color::new(0.1, 0.1, 0.2, 1.0);
+        canvas.clear(bg_color);
+
+        // Draw login text
+        let login_text = Text::new("Press 'R' to register with username 'xyz' and password '123'");
+        let text_width = login_text.dimensions(ctx).unwrap().w;
+        
         canvas.draw(
-            &text,
-            DrawParam::default().dest(text_pos).color(Color::WHITE),
+            &login_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - text_width / 2.0, screen_height / 2.0 - 20.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw auto-login info
+        let auto_text = Text::new("Auto-login will attempt to register after 2 seconds");
+        let auto_width = auto_text.dimensions(ctx).unwrap().w;
+        
+        canvas.draw(
+            &auto_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - auto_width / 2.0, screen_height / 2.0 + 20.0])
+                .color(Color::YELLOW),
         );
     }
 

@@ -25,6 +25,11 @@ defmodule ZoneManager do
         Logger.info("Player-(#{player_pid}) requested Zone-(#{zone}) movement")
         loop_manager(zones)
 
+      {:player_moved, username, x, y, facing} ->
+        hub_pid = Map.get(zones, "hub")
+        send(hub_pid, {:player_moved, username, x, y, facing})
+        loop_manager(zones)
+
       {:new_zone, zone_name} ->
         {:ok, zone_pid} =
           Task.Supervisor.start_child(Server.Services.ZoneManager, fn -> Zone.start(zone_name) end)
