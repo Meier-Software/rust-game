@@ -569,77 +569,94 @@ impl GameState {
                         continue;
                     }
                     
+                    // Log raw messages for debugging
+                    log::info!("Raw server message: {}", message);
+                    
                     // Parse the message to see if it's a player update
                     if let Some(server_message) = self.nc.parse_server_message(&message) {
                         match server_message {
                             protocol::ServerToClient::PlayerJoined(username, position, facing) => {
                                 // Skip if this is our own username
                                 if username == self.username {
+                                    log::info!("Skipping own player joined message: {}", username);
                                     continue;
                                 }
                                 
                                 log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
                                 self.players.add_or_update_player(username, position, facing);
+                                
+                                // Debug print all players
+                                self.players.debug_print_players();
                             },
                             protocol::ServerToClient::PlayerLeft(username) => {
                                 log::info!("Player left: {}", username);
                                 self.players.remove_player(&username);
+                                
+                                // Debug print all players
+                                self.players.debug_print_players();
                             },
                             protocol::ServerToClient::PlayerMoved(username, position, facing) => {
                                 // Skip if this is our own username
                                 if username == self.username {
+                                    log::info!("Skipping own player moved message: {}", username);
                                     continue;
                                 }
                                 
                                 // Only log position updates if the position is not (0,0)
                                 // This is to avoid logging facing-only updates
                                 if position.x != 0 || position.y != 0 {
-                                    log::info!("Player position: {} at ({}, {})", username, position.x, position.y);
+                                    log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
                                 }
                                 
                                 // Update the player's position and facing
                                 self.players.update_player_position(&username, position, facing);
                             },
                             _ => {
-                                // Don't log other message types
+                                log::info!("Received other message type: {:?}", server_message);
                             }
                         }
-                    } else {
-                        // Check if the message contains a player_joined or player_moved string
-                        // This is a fallback in case the parse_server_message method fails
-                        if message.contains("player_joined") || message.contains("player_moved") {
-                            // Try to extract the username and position manually
-                            let parts: Vec<&str> = message.split_whitespace().collect();
-                            if parts.len() >= 5 {
-                                if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
-                                    if pos + 4 < parts.len() {
-                                        let cmd = parts[pos];
-                                        let username = parts[pos + 1].to_string();
+                    } else if message.contains("player_joined") || message.contains("player_moved") {
+                        // Try to extract the username and position manually
+                        let parts: Vec<&str> = message.split_whitespace().collect();
+                        log::info!("Message parts: {:?}", parts);
+                        
+                        if parts.len() >= 5 {
+                            if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
+                                if pos + 4 < parts.len() {
+                                    let cmd = parts[pos];
+                                    let username = parts[pos + 1].to_string();
+                                    
+                                    // Skip if this is our own username
+                                    if username == self.username {
+                                        log::info!("Skipping own player message: {}", username);
+                                        continue;
+                                    }
+                                    
+                                    if let (Ok(x), Ok(y)) = (parts[pos + 2].parse::<i32>(), parts[pos + 3].parse::<i32>()) {
+                                        let facing_str = parts[pos + 4];
+                                        let facing = match facing_str {
+                                            "North" => protocol::Facing::North,
+                                            "East" => protocol::Facing::East,
+                                            "South" => protocol::Facing::South,
+                                            "West" => protocol::Facing::West,
+                                            // Handle the typo cases until the server is fixed
+                                            "Eorth" => protocol::Facing::East,
+                                            "Sorth" => protocol::Facing::South,
+                                            "Worth" => protocol::Facing::West,
+                                            _ => protocol::Facing::South,
+                                        };
                                         
-                                        // Skip if this is our own username
-                                        if username == self.username {
-                                            continue;
-                                        }
+                                        let position = protocol::Position::new(x, y);
                                         
-                                        if let (Ok(x), Ok(y)) = (parts[pos + 2].parse::<i32>(), parts[pos + 3].parse::<i32>()) {
-                                            let facing_str = parts[pos + 4];
-                                            let facing = match facing_str {
-                                                "North" => protocol::Facing::North,
-                                                "East" => protocol::Facing::East,
-                                                "South" => protocol::Facing::South,
-                                                "West" => protocol::Facing::West,
-                                                _ => protocol::Facing::South,
-                                            };
+                                        if cmd == "player_joined" {
+                                            log::info!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
+                                            self.players.add_or_update_player(username, position, facing);
                                             
-                                            let position = protocol::Position::new(x, y);
-                                            
-                                            if cmd == "player_joined" {
-                                                log::info!("Player joined: {} at ({}, {})", username, x, y);
-                                                self.players.add_or_update_player(username, position, facing);
-                                            } else {
-                                                log::info!("Player position: {} at ({}, {})", username, x, y);
-                                                self.players.update_player_position(&username, position, facing);
-                                            }
+                                            // Debug print all players
+                                            self.players.debug_print_players();
+                                        } else {
+                                            log::info!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
+                                            self.players.update_player_position(&username, position, facing);
                                         }
                                     }
                                 }

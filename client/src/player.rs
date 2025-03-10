@@ -350,9 +350,10 @@ impl Players {
         log::info!("--- Current Players ---");
         log::info!("Self: {} at ({}, {})", self.self_player.name, self.self_player.pos.x, self.self_player.pos.y);
         
-        for player in &self.other_players {
-            log::info!("Other: {} at ({}, {})", player.name, player.pos.x, player.pos.y);
+        for (i, player) in self.other_players.iter().enumerate() {
+            log::info!("Other[{}]: {} at ({}, {})", i, player.name, player.pos.x, player.pos.y);
         }
+        log::info!("----------------------");
     }
 
     pub fn draw(
