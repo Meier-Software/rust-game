@@ -77,11 +77,9 @@ defmodule Player do
         {x_delta, _} = Integer.parse(x)
         {y_delta, _} = Integer.parse(y)
 
-        {:ok, x} = Map.fetch(info, :x)
-        info = Map.put(info, :x, x + x_delta)
-
-        {:ok, y} = Map.fetch(info, :y)
-        info = Map.put(info, :y, y + y_delta)
+        # Update position - treat x and y as absolute positions, not deltas
+        info = Map.put(info, :x, x_delta)
+        info = Map.put(info, :y, y_delta)
         
         # Get the current facing direction
         {:ok, facing} = Map.fetch(info, :facing)
@@ -90,7 +88,7 @@ defmodule Player do
         {:ok, username} = Map.fetch(info, :username)
         
         # Broadcast the movement to all players in the zone
-        send(:zone_manager, {:player_moved, username, x + x_delta, y + y_delta, facing})
+        send(:zone_manager, {:player_moved, username, x_delta, y_delta, facing})
 
         loop_player(client_pid, stats, info)
 

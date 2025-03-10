@@ -39,26 +39,30 @@ pub fn handle_key_press(ctx: &Context) -> KeyPressState {
 pub fn handle_input(ctx: &Context) -> MovementState {
     let mut dx = 0;
     let mut dy = 0;
-    let mut direction = protocol::Facing::South;
+    let mut direction = protocol::Facing::South; // Default direction
+    let mut is_moving = false;
 
+    // Check for arrow key presses and WASD
     if ctx.keyboard.is_key_pressed(KeyCode::Up) || ctx.keyboard.is_key_pressed(KeyCode::W) {
         dy -= MOVEMENT_SPEED;
-        direction = North;
+        direction = protocol::Facing::North;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Down) || ctx.keyboard.is_key_pressed(KeyCode::S) {
         dy += MOVEMENT_SPEED;
-        direction = South;
+        direction = protocol::Facing::South;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Left) || ctx.keyboard.is_key_pressed(KeyCode::A) {
         dx -= MOVEMENT_SPEED;
-        direction = West;
+        direction = protocol::Facing::West;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Right) || ctx.keyboard.is_key_pressed(KeyCode::D) {
         dx += MOVEMENT_SPEED;
-        direction = East;
+        direction = protocol::Facing::East;
+        is_moving = true;
     }
-
-    let is_moving = dx != 0 || dy != 0;
 
     MovementState {
         is_moving,
@@ -69,19 +73,20 @@ pub fn handle_input(ctx: &Context) -> MovementState {
 }
 
 pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str) {
+    // Always send the username for identification
+    let username_msg = format!("username {}", username);
+    let _ = nc.send_str(username_msg);
+    
+    // Send facing direction to server regardless of movement
+    let event = ClientToServer::AttemptPlayerFacingChange(movement.direction);
+    let _ = nc.send(event);
+    
+    // Only send movement if actually moving
     if movement.is_moving {
-        // Send movement to server - use absolute position instead of deltas
-        // This ensures the server always has the correct position
+        // Note: We're sending deltas here, but the server interprets them as absolute positions
+        // This is a design issue that should be fixed in a more comprehensive refactoring
         let pos = Position::new(movement.dx, movement.dy);
         let event = ClientToServer::AttemptPlayerMove(pos);
-        let _ = nc.send(event);
-        
-        // Also send the username for identification
-        let username_msg = format!("username {}", username);
-        let _ = nc.send_str(username_msg);
-        
-        // Send facing direction to server
-        let event = ClientToServer::AttemptPlayerFacingChange(movement.direction);
         let _ = nc.send(event);
     }
 }

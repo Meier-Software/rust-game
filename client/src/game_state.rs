@@ -490,9 +490,7 @@ impl GameState {
             log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
             
             // Send an extra position update after teleporting
-            let pos = protocol::Position::new(new_x, new_y);
-            let event = protocol::ClientToServer::AttemptPlayerMove(pos);
-            let _ = self.nc.send(event);
+            self.send_absolute_position();
         }
         
         // Periodically send position updates even when not moving
@@ -504,13 +502,7 @@ impl GameState {
                 POSITION_UPDATE_TIMER = 0.0;
                 
                 // Send current position
-                let pos = protocol::Position::new(self.players.self_player.pos.x, self.players.self_player.pos.y);
-                let event = protocol::ClientToServer::AttemptPlayerMove(pos);
-                let _ = self.nc.send(event);
-                
-                // Send current facing direction
-                let event = protocol::ClientToServer::AttemptPlayerFacingChange(self.players.self_player.direction);
-                let _ = self.nc.send(event);
+                self.send_absolute_position();
                 
                 log::info!("Sent periodic position update: ({}, {})", 
                           self.players.self_player.pos.x, self.players.self_player.pos.y);
@@ -521,6 +513,25 @@ impl GameState {
         for _ in 0..3 {
             self.process_network_messages();
         }
+    }
+    
+    // Helper method to send the player's absolute position to the server
+    fn send_absolute_position(&mut self) {
+        // Send current position
+        let pos = protocol::Position::new(
+            self.players.self_player.pos.x,
+            self.players.self_player.pos.y
+        );
+        let event = protocol::ClientToServer::AttemptPlayerMove(pos);
+        let _ = self.nc.send(event);
+        
+        // Send current facing direction
+        let event = protocol::ClientToServer::AttemptPlayerFacingChange(self.players.self_player.direction);
+        let _ = self.nc.send(event);
+        
+        // Send username for identification
+        let username_msg = format!("username {}", self.username);
+        let _ = self.nc.send_str(username_msg);
     }
 
     // Method to process network messages for other players

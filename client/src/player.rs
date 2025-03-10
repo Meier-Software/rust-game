@@ -14,6 +14,8 @@ use crate::{
 const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
 const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
+const ANIMATION_SPEED: f32 = 5.0;
+const IDLE_ANIMATION_SPEED: f32 = 2.0;
 
 // Character types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -80,87 +82,67 @@ impl Player {
     }
 
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
-        // Store previous state
-        let was_moving = self.is_moving;
-        let previous_direction = self.direction;
-
-        // Update movement state
-        self.is_moving = movement.is_moving;
-        self.direction = movement.direction;
-
-        // Reset idle timer if player starts moving or changes direction
-        if ((was_moving != self.is_moving) && self.is_moving)
-            || (previous_direction != self.direction)
-        {
-            self.idle_timer = 0.0;
-            self.is_in_idle_animation = false;
-            log::trace!("Player moved or changed direction, resetting idle animation state");
+        // Update direction based on movement
+        if movement.is_moving {
+            self.direction = movement.direction;
         }
 
-        // Update animation if moving
+        // Calculate new position based on movement
+        let new_x = self.pos.x + movement.dx;
+        let new_y = self.pos.y + movement.dy;
+
+        // Check if the new position is valid
+        if map.is_valid_position(new_x, new_y, grid_size) {
+            self.pos.x = new_x;
+            self.pos.y = new_y;
+            self.is_moving = movement.is_moving;
+        } else {
+            // If we can't move in both directions, try moving in just one
+            let new_x_only = self.pos.x + movement.dx;
+            let new_y_only = self.pos.y + movement.dy;
+
+            if map.is_valid_position(new_x_only, self.pos.y, grid_size) {
+                self.pos.x = new_x_only;
+                self.is_moving = movement.is_moving;
+            }
+
+            if map.is_valid_position(self.pos.x, new_y_only, grid_size) {
+                self.pos.y = new_y_only;
+                self.is_moving = movement.is_moving;
+            }
+        }
+
+        // Update animation frame
         if self.is_moving {
-            // Update animation frame
-            self.frame_timer += delta_time;
-            if self.frame_timer >= ANIMATION_FRAME_TIME {
+            // Reset idle timer when moving
+            self.idle_timer = 0.0;
+            self.is_in_idle_animation = false;
+
+            // Update frame timer for running animation
+            self.frame_timer += delta_time * ANIMATION_SPEED;
+            if self.frame_timer >= 1.0 {
                 self.frame_timer = 0.0;
-                self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Using MAX_FRAMES constant
+                self.current_frame = (self.current_frame + 1) % MAX_FRAMES;
             }
         } else {
-            // When not moving, increment idle timer
+            // Update idle timer
             self.idle_timer += delta_time;
 
-            // Check if we should switch to idle animation
-            if self.idle_timer >= IDLE_ANIMATION_DELAY && !self.is_in_idle_animation {
+            // Start idle animation after 3 seconds of no movement
+            if self.idle_timer >= 3.0 && !self.is_in_idle_animation {
                 self.is_in_idle_animation = true;
-                self.current_frame = 0; // Reset frame for idle animation
-                self.frame_timer = 0.0;
-                log::info!("Entering idle animation");
-            }
-
-            // If in idle animation, update frames continuously to loop the animation
-            if self.is_in_idle_animation {
-                self.frame_timer += delta_time;
-                if self.frame_timer >= ANIMATION_FRAME_TIME * 3.0 {
-                    // Even slower idle/sleep animation
-                    self.frame_timer = 0.0;
-                    let old_frame = self.current_frame;
-                    self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Loop through frames
-                    log::trace!(
-                        "Idle animation frame changed: {} -> {}",
-                        old_frame,
-                        self.current_frame
-                    ); // Debug output
-                }
-            } else {
-                // Reset to first frame when not moving and not in idle animation
                 self.current_frame = 0;
                 self.frame_timer = 0.0;
             }
-        }
 
-        // Update position
-        if movement.is_moving {
-            // Calculate new position
-            let new_x = self.pos.x + movement.dx;
-            let new_y = self.pos.y + movement.dy;
-
-            // Calculate the center of the player sprite for collision detection
-            let center_x = new_x + PLAYER_SIZE / 2;
-            let center_y = new_y + PLAYER_SIZE / 2;
-
-            // Check horizontal movement
-            if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2, grid_size) {
-                self.pos.x = new_x;
+            // Update frame timer for idle animation
+            if self.is_in_idle_animation {
+                self.frame_timer += delta_time * IDLE_ANIMATION_SPEED;
+                if self.frame_timer >= 1.0 {
+                    self.frame_timer = 0.0;
+                    self.current_frame = (self.current_frame + 1) % MAX_FRAMES;
+                }
             }
-
-            // Check vertical movement
-            if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2, center_y, grid_size) {
-                self.pos.y = new_y;
-            }
-
-            // Ensure player stays within world bounds
-            self.pos.x = self.pos.x.clamp(0, WORLD_SIZE - PLAYER_SIZE);
-            self.pos.y = self.pos.y.clamp(0, WORLD_SIZE - PLAYER_SIZE);
         }
     }
 
