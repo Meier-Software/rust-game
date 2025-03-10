@@ -74,19 +74,17 @@ pub fn handle_input(ctx: &Context) -> MovementState {
 
 pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str) {
     // Always send the username for identification
-    let username_msg = format!("username {}", username);
+    let username_msg = format!("username {}\r\n", username);
     let _ = nc.send_str(username_msg);
     
     // Send facing direction to server regardless of movement
-    let event = ClientToServer::AttemptPlayerFacingChange(movement.direction);
-    let _ = nc.send(event);
+    let facing_msg = format!("face {}\r\n", movement.direction);
+    let _ = nc.send_str(facing_msg);
     
     // Only send movement if actually moving
     if movement.is_moving {
-        // Note: We're sending deltas here, but the server interprets them as absolute positions
-        // This is a design issue that should be fixed in a more comprehensive refactoring
-        let pos = Position::new(movement.dx, movement.dy);
-        let event = ClientToServer::AttemptPlayerMove(pos);
-        let _ = nc.send(event);
+        // Send movement as a string in the format the server expects
+        let move_msg = format!("move {} {}\r\n", movement.dx, movement.dy);
+        let _ = nc.send_str(move_msg);
     }
 }

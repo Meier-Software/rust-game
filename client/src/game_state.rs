@@ -323,8 +323,8 @@ impl GameState {
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             if !self.username.is_empty() && !self.password.is_empty() {
                 log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
-                let event = ClientToServer::Register(self.username.clone(), self.password.clone());
-                let _ = self.nc.send(event);
+                let register_msg = format!("register {} {}\r\n", self.username, self.password);
+                let _ = self.nc.send_str(register_msg);
             }
         }
         
@@ -343,7 +343,7 @@ impl GameState {
                     log::info!("Set player name to: {}", self.username);
                     
                     // Send the username to the server for identification
-                    let username_msg = format!("username {}", self.username);
+                    let username_msg = format!("username {}\r\n", self.username);
                     let _ = self.nc.send_str(username_msg);
                     
                     // Transition to InGame stage
@@ -352,7 +352,18 @@ impl GameState {
             }
             Err(err) => match err {
                 NoNewData => {
-                    // Auto-login for testing purposes is now disabled since we have manual input
+                    // Auto-login for testing purposes
+                    // This will automatically try to login after a short delay
+                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
+                    unsafe {
+                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
+                        if AUTO_LOGIN_TIMER > 2.0 {
+                            AUTO_LOGIN_TIMER = 0.0;
+                            log::info!("Auto-login: Sending login command");
+                            let register_msg = format!("register test_user password\r\n");
+                            let _ = self.nc.send_str(register_msg);
+                        }
+                    }
                 }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
@@ -520,21 +531,20 @@ impl GameState {
     
     // Helper method to send the player's absolute position to the server
     fn send_absolute_position(&mut self) {
-        // Send current position
-        let pos = protocol::Position::new(
-            self.players.self_player.pos.x,
-            self.players.self_player.pos.y
-        );
-        let event = protocol::ClientToServer::AttemptPlayerMove(pos);
-        let _ = self.nc.send(event);
+        // Send username for identification
+        let username_msg = format!("username {}\r\n", self.username);
+        let _ = self.nc.send_str(username_msg);
         
         // Send current facing direction
-        let event = protocol::ClientToServer::AttemptPlayerFacingChange(self.players.self_player.direction);
-        let _ = self.nc.send(event);
+        let facing_msg = format!("face {}\r\n", self.players.self_player.direction);
+        let _ = self.nc.send_str(facing_msg);
         
-        // Send username for identification
-        let username_msg = format!("username {}", self.username);
-        let _ = self.nc.send_str(username_msg);
+        // Send current position
+        let move_msg = format!("move {} {}\r\n", 
+            self.players.self_player.pos.x, 
+            self.players.self_player.pos.y
+        );
+        let _ = self.nc.send_str(move_msg);
     }
 
     // Method to process network messages for other players
