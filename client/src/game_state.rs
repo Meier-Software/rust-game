@@ -4,13 +4,12 @@ use ggez::{
     input::keyboard::KeyCode,
     GameResult,
 };
-use protocol::{ClientToServer, Position};
+use protocol::Position;
 
 use crate::{
     assets::AssetManager,
     input,
     map::Map,
-    net::NCError,
     net::NetClient,
     player::Players,
 };
@@ -534,8 +533,8 @@ impl GameState {
                 self.map.current_room = new_room;
                 
                 // Update player position to the new coordinates
-                self.players.self_player.pos.x = new_x;
-                self.players.self_player.pos.y = new_y;
+                self.players.self_player.pos.x = new_x as i32;
+                self.players.self_player.pos.y = new_y as i32;
                 self.players.self_player.direction = facing;
                 
                 // Send the new position to the server

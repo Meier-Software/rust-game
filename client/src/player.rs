@@ -7,7 +7,7 @@ use protocol::{Facing, Position};
 
 use crate::{
     assets::AssetManager,
-    input::{MovementState, PLAYER_SIZE, WORLD_SIZE},
+    input::{MovementState, PLAYER_SIZE},
     map::Map,
 };
 // Animation constants
