@@ -488,6 +488,33 @@ impl GameState {
             self.players.self_player.direction = facing;
             
             log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
+            
+            // Send an extra position update after teleporting
+            let pos = protocol::Position::new(new_x, new_y);
+            let event = protocol::ClientToServer::AttemptPlayerMove(pos);
+            let _ = self.nc.send(event);
+        }
+        
+        // Periodically send position updates even when not moving
+        // This ensures other clients know where we are
+        static mut POSITION_UPDATE_TIMER: f32 = 0.0;
+        unsafe {
+            POSITION_UPDATE_TIMER += delta_time;
+            if POSITION_UPDATE_TIMER > 1.0 {  // Send position update every second
+                POSITION_UPDATE_TIMER = 0.0;
+                
+                // Send current position
+                let pos = protocol::Position::new(self.players.self_player.pos.x, self.players.self_player.pos.y);
+                let event = protocol::ClientToServer::AttemptPlayerMove(pos);
+                let _ = self.nc.send(event);
+                
+                // Send current facing direction
+                let event = protocol::ClientToServer::AttemptPlayerFacingChange(self.players.self_player.direction);
+                let _ = self.nc.send(event);
+                
+                log::info!("Sent periodic position update: ({}, {})", 
+                          self.players.self_player.pos.x, self.players.self_player.pos.y);
+            }
         }
         
         // Process network messages multiple times per frame to ensure we don't miss any
@@ -520,14 +547,32 @@ impl GameState {
                     if let Some(server_message) = self.nc.parse_server_message(&message) {
                         match server_message {
                             protocol::ServerToClient::PlayerJoined(username, position, facing) => {
+                                // Skip if this is our own username
+                                if username == self.username {
+                                    log::info!("Ignoring PlayerJoined message for self: {}", username);
+                                    continue;
+                                }
+                                
                                 log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
                                 self.players.add_or_update_player(username, position, facing);
+                                
+                                // Debug print all players after adding a new one
+                                self.players.debug_print_players();
                             },
                             protocol::ServerToClient::PlayerLeft(username) => {
                                 log::info!("Player left: {}", username);
                                 self.players.remove_player(&username);
+                                
+                                // Debug print all players after removing one
+                                self.players.debug_print_players();
                             },
                             protocol::ServerToClient::PlayerMoved(username, position, facing) => {
+                                // Skip if this is our own username
+                                if username == self.username {
+                                    log::info!("Ignoring PlayerMoved message for self: {}", username);
+                                    continue;
+                                }
+                                
                                 log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
                                 self.players.update_player_position(&username, position, facing);
                             },
@@ -536,7 +581,51 @@ impl GameState {
                             }
                         }
                     } else {
-                        log::warn!("Could not parse server message: {}", message);
+                        // Check if the message contains a player_joined or player_moved string
+                        // This is a fallback in case the parse_server_message method fails
+                        if message.contains("player_joined") || message.contains("player_moved") {
+                            log::warn!("Message contains player update but couldn't be parsed: {}", message);
+                            
+                            // Try to extract the username and position manually
+                            let parts: Vec<&str> = message.split_whitespace().collect();
+                            if parts.len() >= 5 {
+                                if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
+                                    if pos + 4 < parts.len() {
+                                        let cmd = parts[pos];
+                                        let username = parts[pos + 1].to_string();
+                                        
+                                        // Skip if this is our own username
+                                        if username == self.username {
+                                            log::info!("Ignoring message for self: {}", username);
+                                            continue;
+                                        }
+                                        
+                                        if let (Ok(x), Ok(y)) = (parts[pos + 2].parse::<i32>(), parts[pos + 3].parse::<i32>()) {
+                                            let facing_str = parts[pos + 4];
+                                            let facing = match facing_str {
+                                                "North" => protocol::Facing::North,
+                                                "East" => protocol::Facing::East,
+                                                "South" => protocol::Facing::South,
+                                                "West" => protocol::Facing::West,
+                                                _ => protocol::Facing::South,
+                                            };
+                                            
+                                            let position = protocol::Position::new(x, y);
+                                            
+                                            if cmd == "player_joined" {
+                                                log::info!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
+                                                self.players.add_or_update_player(username, position, facing);
+                                            } else {
+                                                log::info!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
+                                                self.players.update_player_position(&username, position, facing);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            log::warn!("Could not parse server message: {}", message);
+                        }
                     }
                     
                     // Break if we've processed too many messages to prevent infinite loops

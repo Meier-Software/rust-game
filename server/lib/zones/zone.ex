@@ -30,6 +30,7 @@ defmodule Zone do
           receive do
             {:position_info, x, y, facing} ->
               # Send the information to the new player
+              Logger.info("Sending player_joined message to new player: #{existing_name} at (#{x}, #{y}) facing #{facing}")
               send(player_pid, {:client_send, "player_joined #{existing_name} #{x} #{y} #{facing}"})
           after
             1000 -> Logger.warn("Timeout waiting for position info from #{existing_name}")
@@ -41,10 +42,23 @@ defmodule Zone do
         zone_data = Map.put(zone_data, :playerlist, player_list)
         Logger.info("New player #{inspect(name)} joined zone #{inspect(zone_data)}.")
 
+        # Broadcast a general message that a player joined
         send(self(), {:broadcast, "Player #{name} joined HUB"})
         
-        # Also broadcast player_joined with position information
-        send(self(), {:broadcast_player_joined, name, 0, 0, "South"})
+        # Request the new player's position to broadcast to others
+        send(player_pid, {:get_position, self()})
+        
+        # Wait for the response
+        receive do
+          {:position_info, x, y, facing} ->
+            # Broadcast player_joined with position information to all other players
+            for {k, other_pid} <- player_list, k != name do
+              Logger.info("Broadcasting new player to existing player #{k}: #{name} at (#{x}, #{y}) facing #{facing}")
+              send(other_pid, {:client_send, "player_joined #{name} #{x} #{y} #{facing}"})
+            end
+        after
+          1000 -> Logger.warn("Timeout waiting for position info from new player #{name}")
+        end
         
         loop_zone(zone_data)
         

@@ -2,6 +2,7 @@ use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
 use protocol::Facing::*;
 use protocol::Position;
+use protocol::ClientToServer;
 
 // Game constants
 pub const MOVEMENT_SPEED: i32 = 1;
@@ -67,19 +68,20 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
 }
 
-pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState) {
+pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str) {
     if movement.is_moving {
-        // Convert to integer deltas for the server
-        let dx_int = movement.dx;
-        let dy_int = movement.dy;
-
-        if dx_int != 0 || dy_int != 0 {
-            let pos = Position::new(dx_int, dy_int);
-            let move_event = protocol::ClientToServer::AttemptPlayerMove(pos);
-            let _ = nc.send(move_event);
-
-            let dir_event = protocol::ClientToServer::AttemptPlayerFacingChange(movement.direction);
-            let _ = nc.send(dir_event);
-        }
+        // Send movement to server - use absolute position instead of deltas
+        // This ensures the server always has the correct position
+        let pos = Position::new(movement.dx, movement.dy);
+        let event = ClientToServer::AttemptPlayerMove(pos);
+        let _ = nc.send(event);
+        
+        // Also send the username for identification
+        let username_msg = format!("username {}", username);
+        let _ = nc.send_str(username_msg);
+        
+        // Send facing direction to server
+        let event = ClientToServer::AttemptPlayerFacingChange(movement.direction);
+        let _ = nc.send(event);
     }
 }
