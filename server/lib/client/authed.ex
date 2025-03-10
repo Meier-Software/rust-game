@@ -26,6 +26,7 @@ defmodule Client.Authed do
         Logger.info("Client quit.")
 
         :gen_tcp.close(client_socket)
+        Process.exit(player_pid, "quit.")
         Process.exit(self(), "Client quit.")
 
       ["stats"] ->
@@ -110,16 +111,16 @@ defmodule Client.Authed do
       0 ->
         line = read_line(client_socket)
         line = process_line(line, client_socket, auth, player_pid)
-
+        # TODO: Evaluate if this is really needed and most likely remove it.
         line = "USR-(#{auth}): " <> line
         write_line(line, client_socket)
 
         loop_client(client_socket, auth, player_pid)
-        # code
     end
   end
 
   defp read_line(client_socket) do
+    # TODO Handle all cases to prevent a needless client death.
     case :gen_tcp.recv(client_socket, 0) do
       {:ok, data} ->
         data
