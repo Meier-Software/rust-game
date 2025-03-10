@@ -148,6 +148,7 @@ impl NetClient {
         }
     }
 
+    // TODO: Swap this over to -> Result<protocol::ServerToClient, protocol::Error>
     pub fn parse_server_message(&self, message: &str) -> Option<protocol::ServerToClient> {
         // Extract the username from the message if it contains "USR-"
         let _username_from_prefix = message
@@ -180,13 +181,7 @@ impl NetClient {
                         parts[pos_index + 3].parse::<i32>(),
                     ) {
                         let facing_str = parts[pos_index + 4];
-                        let facing = match facing_str {
-                            "North" => protocol::Facing::North,
-                            "East" => protocol::Facing::East,
-                            "South" => protocol::Facing::South,
-                            "West" => protocol::Facing::West,
-                            _ => protocol::Facing::South,
-                        };
+                        let facing = protocol::Facing::from_str(facing_str);
 
                         log::trace!(
                             "Successfully parsed player_moved message for {}: ({}, {}) facing {:?}",
@@ -230,13 +225,7 @@ impl NetClient {
                         parts[pos_index + 3].parse::<i32>(),
                     ) {
                         let facing_str = parts[pos_index + 4];
-                        let facing = match facing_str {
-                            "North" => protocol::Facing::North,
-                            "East" => protocol::Facing::East,
-                            "South" => protocol::Facing::South,
-                            "West" => protocol::Facing::West,
-                            _ => protocol::Facing::South,
-                        };
+                        let facing = protocol::Facing::from_str(facing_str);
 
                         log::trace!(
                             "Successfully parsed player_joined message for {}: ({}, {}) facing {:?}",
@@ -302,13 +291,7 @@ impl NetClient {
                 if let Some(facing_index) = parts.iter().position(|&part| part == "Facing") {
                     if facing_index + 1 < parts.len() {
                         let facing_str = parts[facing_index + 1];
-                        let facing = match facing_str {
-                            "North" => protocol::Facing::North,
-                            "East" => protocol::Facing::East,
-                            "South" => protocol::Facing::South,
-                            "West" => protocol::Facing::West,
-                            _ => protocol::Facing::South,
-                        };
+                        let facing = protocol::Facing::from_str(facing_str);
 
                         // We don't have a position, so use a dummy position
                         // This is just to update the facing direction

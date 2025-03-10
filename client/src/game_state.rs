@@ -551,7 +551,10 @@ impl GameState {
         self.handle_login_input(ctx);
 
         // Check for Enter key to submit login/registration
-        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) && !self.username.is_empty() && !self.password.is_empty() {
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return)
+            && !self.username.is_empty()
+            && !self.password.is_empty()
+        {
             match self.auth_action {
                 AuthAction::Login => {
                     log::info!(
@@ -568,8 +571,7 @@ impl GameState {
                         self.username,
                         self.password
                     );
-                    let register_msg =
-                        format!("register {} {}\r\n", self.username, self.password);
+                    let register_msg = format!("register {} {}\r\n", self.username, self.password);
                     let _ = self.nc.send_str(register_msg);
                 }
             }
@@ -590,8 +592,8 @@ impl GameState {
                     log::trace!("Set player name to: {}", self.username);
 
                     // Send the username to the server for identification
-                    let username_msg = format!("username {}\r\n", self.username);
-                    let _ = self.nc.send_str(username_msg);
+                    let user_event = protocol::ClientToServer::SetUsername(self.username.clone());
+                    let _ = self.nc.send(user_event);
 
                     // Transition to InGame stage
                     self.stage = Stage::InGame;
@@ -616,15 +618,19 @@ impl GameState {
     fn handle_login_input(&mut self, ctx: &Context) {
         // Switch focus with Tab key
         if ctx.keyboard.is_key_just_pressed(KeyCode::Tab) {
+            use InputField::*;
             self.input_focus = match self.input_focus {
-                InputField::Username => InputField::Password,
-                InputField::Password => InputField::ActionType,
-                InputField::ActionType => InputField::Username,
+                Username => Password,
+                Password => ActionType,
+                ActionType => Username,
             };
         }
 
         // Handle action type switching with arrow keys when ActionType is focused
-        if matches!(self.input_focus, InputField::ActionType) && (ctx.keyboard.is_key_just_pressed(KeyCode::Left) || ctx.keyboard.is_key_just_pressed(KeyCode::Right)) {
+        if matches!(self.input_focus, InputField::ActionType)
+            && (ctx.keyboard.is_key_just_pressed(KeyCode::Left)
+                || ctx.keyboard.is_key_just_pressed(KeyCode::Right))
+        {
             self.auth_action = match self.auth_action {
                 AuthAction::Login => AuthAction::Register,
                 AuthAction::Register => AuthAction::Login,
@@ -742,8 +748,8 @@ impl GameState {
             self.is_chatting = !self.is_chatting;
             if !self.is_chatting && !self.chat_input.is_empty() {
                 // Send the chat message when exiting chat mode if there's a message
-                let chat_msg = format!("chat {}\r\n", self.chat_input);
-                let _ = self.nc.send_str(chat_msg);
+                let chat_event = protocol::ClientToServer::ChatMessage(self.chat_input.clone());
+                let _ = self.nc.send(chat_event);
 
                 // Also display the message for the local player
                 self.players
@@ -824,19 +830,20 @@ impl GameState {
     // Helper method to send the player's absolute position to the server
     fn send_absolute_position(&mut self) {
         // Send username for identification
-        let username_msg = format!("username {}\r\n", self.username);
-        let _ = self.nc.send_str(username_msg);
+        let username_event = protocol::ClientToServer::SetUsername(self.username.clone());
+        let _ = self.nc.send(username_event);
 
         // Send current facing direction
-        let facing_msg = format!("face {}\r\n", self.players.self_player.direction);
-        let _ = self.nc.send_str(facing_msg);
+        let facing_event =
+            protocol::ClientToServer::AttemptPlayerFacingChange(self.players.self_player.direction);
+        let _ = self.nc.send(facing_event);
 
         // Send absolute position
-        let move_msg = format!(
-            "pos {} {}\r\n",
-            self.players.self_player.pos.x, self.players.self_player.pos.y
+        let move_event = protocol::ClientToServer::SetPosition(
+            self.players.self_player.pos.x,
+            self.players.self_player.pos.y,
         );
-        let _ = self.nc.send_str(move_msg);
+        let _ = self.nc.send(move_event);
 
         // Log the position being sent
         log::trace!(
@@ -958,13 +965,7 @@ impl GameState {
                                         parts[pos + 3].parse::<i32>(),
                                     ) {
                                         let facing_str = parts[pos + 4];
-                                        let facing = match facing_str {
-                                            "North" => protocol::Facing::North,
-                                            "East" => protocol::Facing::East,
-                                            "South" => protocol::Facing::South,
-                                            "West" => protocol::Facing::West,
-                                            _ => protocol::Facing::South,
-                                        };
+                                        let facing = protocol::Facing::from_str(facing_str);
 
                                         let position = protocol::Position::new(x, y);
 
@@ -1120,20 +1121,21 @@ impl GameState {
                 for player in &mut self.players.other_players {
                     if player.name == "SimPlayer" {
                         // Update the direction
+                        use protocol::Facing::*;
                         player.direction = match DIRECTION {
-                            0 => protocol::Facing::North,
-                            1 => protocol::Facing::East,
-                            2 => protocol::Facing::South,
-                            3 => protocol::Facing::West,
-                            _ => protocol::Facing::South,
+                            0 => North,
+                            1 => East,
+                            2 => South,
+                            3 => West,
+                            _ => South,
                         };
 
                         // Move the player in that direction
                         let (dx, dy) = match player.direction {
-                            protocol::Facing::North => (0, -1),
-                            protocol::Facing::East => (1, 0),
-                            protocol::Facing::South => (0, 1),
-                            protocol::Facing::West => (-1, 0),
+                            North => (0, -1),
+                            East => (1, 0),
+                            South => (0, 1),
+                            West => (-1, 0),
                         };
 
                         player.pos.x += dx * GRID_SIZE;

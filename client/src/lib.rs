@@ -7,3 +7,4 @@ pub mod input;
 pub mod map;
 pub mod net;
 pub mod player;
+pub mod ui;

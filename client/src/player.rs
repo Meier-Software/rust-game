@@ -1,13 +1,13 @@
-use ggez::{
-    Context, GameResult,
-    graphics::{self, Drawable},
-};
-use protocol::{Facing, Position};
 use crate::{
     assets::AssetManager,
     input::{MovementState, PLAYER_SIZE},
     map::Map,
 };
+use ggez::{
+    Context, GameResult,
+    graphics::{self, Drawable},
+};
+use protocol::{Facing, Position};
 // Animation constants
 // const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
