@@ -33,8 +33,14 @@ defmodule Zone do
           receive do
             {:position_info, x, y, facing} ->
               # Send the information to the new player
-              Logger.info("Sending player_joined message to new player: #{existing_name} at (#{x}, #{y})")
-              send(player_pid, {:client_send, "player_joined #{existing_name} #{x} #{y} #{facing}"})
+              Logger.info(
+                "Sending player_joined message to new player: #{existing_name} at (#{x}, #{y})"
+              )
+
+              send(
+                player_pid,
+                {:client_send, "player_joined #{existing_name} #{x} #{y} #{facing}"}
+              )
           after
             1 -> Logger.warn("Timeout waiting for position info from #{existing_name}")
           end
@@ -74,6 +80,7 @@ defmodule Zone do
 
         # Broadcast to all players except the one who moved
         broadcast_count = 0
+
         for {k, player_pid} <- player_list, k != username do
           # Logger.info("Broadcasting movement to player #{k}")
           send(player_pid, {:client_send, "player_moved #{username} #{x} #{y} #{facing}"})

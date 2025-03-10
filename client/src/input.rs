@@ -69,15 +69,20 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
 }
 
-pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str, player_pos: &protocol::Position) {
+pub fn send_movement_to_server(
+    nc: &mut NetClient,
+    movement: &MovementState,
+    username: &str,
+    player_pos: &protocol::Position,
+) {
     // Always send the username for identification
     let username_msg = format!("username {}\r\n", username);
     let _ = nc.send_str(username_msg);
-    
+
     // Send facing direction to server regardless of movement
     let facing_msg = format!("face {}\r\n", movement.direction);
     let _ = nc.send_str(facing_msg);
-    
+
     // Only send movement if actually moving
     if movement.is_moving {
         // Send absolute position instead of relative movement

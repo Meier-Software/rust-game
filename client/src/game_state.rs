@@ -1,8 +1,8 @@
 use ggez::{
+    GameResult,
     context::Context,
     graphics::{self, Color, DrawParam, Drawable, Rect, Text},
     input::keyboard::KeyCode,
-    GameResult,
 };
 use protocol::Position;
 
@@ -43,13 +43,13 @@ pub struct GameState {
 
     // Map
     map: Map,
-    
+
     // Login state
     username: String,
     password: String,
     input_focus: InputField,
     auth_action: AuthAction, // New field to track the current auth action
-    
+
     // Chat state
     is_chatting: bool,
     chat_input: String,
@@ -75,11 +75,11 @@ impl GameState {
     pub fn new_offline(ctx: &mut Context) -> Self {
         Self::new_with_mode(ctx, true)
     }
-    
+
     pub fn new_with_map(ctx: &mut Context, map: Map) -> Self {
         Self::new_with_mode_and_map(ctx, false, map)
     }
-    
+
     pub fn new_offline_with_map(ctx: &mut Context, map: Map) -> Self {
         Self::new_with_mode_and_map(ctx, true, map)
     }
@@ -89,7 +89,7 @@ impl GameState {
         let map = Map::new();
         Self::new_with_mode_and_map(ctx, offline_mode, map)
     }
-    
+
     fn new_with_mode_and_map(ctx: &mut Context, offline_mode: bool, map: Map) -> Self {
         // Create network client based on mode
         let nc = if offline_mode {
@@ -129,16 +129,23 @@ impl GameState {
         asset_manager.debug_print_loaded_assets();
 
         // Create player at starting position
-        let start_pos = Position::new((GRID_SIZE as f32 * 1.5) as i32, (GRID_SIZE as f32 * 1.5) as i32);
-        log::trace!("Creating player at starting position: ({}, {})", start_pos.x, start_pos.y);
+        let start_pos = Position::new(
+            (GRID_SIZE as f32 * 1.5) as i32,
+            (GRID_SIZE as f32 * 1.5) as i32,
+        );
+        log::trace!(
+            "Creating player at starting position: ({}, {})",
+            start_pos.x,
+            start_pos.y
+        );
         let players = Players::new("Player".to_string(), start_pos);
 
         Self {
-            stage: if offline_mode { 
-                Stage::Offline 
-            } else { 
+            stage: if offline_mode {
+                Stage::Offline
+            } else {
                 // Start in PreAuth stage for online mode
-                Stage::PreAuth 
+                Stage::PreAuth
             },
             nc,
             asset_manager,
@@ -164,8 +171,12 @@ impl GameState {
             "/sprites/Files/Assets/Heroes/{}/{}_{}",
             character, character, gender
         );
-        
-        log::trace!("Loading character assets for {} from path: {}", character, character_path);
+
+        log::trace!(
+            "Loading character assets for {} from path: {}",
+            character,
+            character_path
+        );
 
         // Load idle animations
         let idle_down_path = format!(
@@ -177,28 +188,24 @@ impl GameState {
             gender.to_lowercase()
         );
         log::trace!("Loading idle down animation from: {}", idle_down_path);
-        
+
         // Special handling for Archer to ensure assets are loaded correctly
-        let load_result = asset_manager.load_asset(
-            ctx,
-            &format!("{}_idle_down", character),
-            &idle_down_path,
-        );
-        
+        let load_result =
+            asset_manager.load_asset(ctx, &format!("{}_idle_down", character), &idle_down_path);
+
         // If loading fails for Archer, try an alternative path
         if let Err(e) = load_result {
             if character == "Archer" {
-                log::warn!("Failed to load Archer idle down animation: {}. Trying alternative path.", e);
+                log::warn!(
+                    "Failed to load Archer idle down animation: {}. Trying alternative path.",
+                    e
+                );
                 // Try alternative path with correct casing
                 let alt_path = format!(
                     "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
                     character_path
                 );
-                asset_manager.load_asset(
-                    ctx,
-                    &format!("{}_idle_down", character),
-                    &alt_path,
-                )?;
+                asset_manager.load_asset(ctx, &format!("{}_idle_down", character), &alt_path)?;
             } else {
                 return Err(e);
             }
@@ -213,28 +220,24 @@ impl GameState {
             gender.to_lowercase()
         );
         log::trace!("Loading idle up animation from: {}", idle_up_path);
-        
+
         // Special handling for Archer to ensure assets are loaded correctly
-        let load_result = asset_manager.load_asset(
-            ctx,
-            &format!("{}_idle_up", character),
-            &idle_up_path,
-        );
-        
+        let load_result =
+            asset_manager.load_asset(ctx, &format!("{}_idle_up", character), &idle_up_path);
+
         // If loading fails for Archer, try an alternative path
         if let Err(e) = load_result {
             if character == "Archer" {
-                log::warn!("Failed to load Archer idle up animation: {}. Trying alternative path.", e);
+                log::warn!(
+                    "Failed to load Archer idle up animation: {}. Trying alternative path.",
+                    e
+                );
                 // Try alternative path with correct casing
                 let alt_path = format!(
                     "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
                     character_path
                 );
-                asset_manager.load_asset(
-                    ctx,
-                    &format!("{}_idle_up", character),
-                    &alt_path,
-                )?;
+                asset_manager.load_asset(ctx, &format!("{}_idle_up", character), &alt_path)?;
             } else {
                 return Err(e);
             }
@@ -249,28 +252,24 @@ impl GameState {
             gender.to_lowercase()
         );
         log::trace!("Loading idle right animation from: {}", idle_right_path);
-        
+
         // Special handling for Archer to ensure assets are loaded correctly
-        let load_result = asset_manager.load_asset(
-            ctx,
-            &format!("{}_idle_right", character),
-            &idle_right_path,
-        );
-        
+        let load_result =
+            asset_manager.load_asset(ctx, &format!("{}_idle_right", character), &idle_right_path);
+
         // If loading fails for Archer, try an alternative path
         if let Err(e) = load_result {
             if character == "Archer" {
-                log::warn!("Failed to load Archer idle right animation: {}. Trying alternative path.", e);
+                log::warn!(
+                    "Failed to load Archer idle right animation: {}. Trying alternative path.",
+                    e
+                );
                 // Try alternative path with correct casing
                 let alt_path = format!(
                     "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
                     character_path
                 );
-                asset_manager.load_asset(
-                    ctx,
-                    &format!("{}_idle_right", character),
-                    &alt_path,
-                )?;
+                asset_manager.load_asset(ctx, &format!("{}_idle_right", character), &alt_path)?;
             } else {
                 return Err(e);
             }
@@ -285,28 +284,24 @@ impl GameState {
             character.to_lowercase(),
             gender.to_lowercase()
         );
-        
+
         // Special handling for Archer to ensure assets are loaded correctly
-        let load_result = asset_manager.load_asset(
-            ctx,
-            &format!("{}_idle_left", character),
-            &idle_left_path,
-        );
-        
+        let load_result =
+            asset_manager.load_asset(ctx, &format!("{}_idle_left", character), &idle_left_path);
+
         // If loading fails for Archer, try an alternative path
         if let Err(e) = load_result {
             if character == "Archer" {
-                log::warn!("Failed to load Archer idle left animation: {}. Trying alternative path.", e);
+                log::warn!(
+                    "Failed to load Archer idle left animation: {}. Trying alternative path.",
+                    e
+                );
                 // Try alternative path with correct casing
                 let alt_path = format!(
                     "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
                     character_path
                 );
-                asset_manager.load_asset(
-                    ctx,
-                    &format!("{}_idle_left", character),
-                    &alt_path,
-                )?;
+                asset_manager.load_asset(ctx, &format!("{}_idle_left", character), &alt_path)?;
             } else {
                 return Err(e);
             }
@@ -326,21 +321,21 @@ impl GameState {
             );
 
             // Special handling for Archer to ensure assets are loaded correctly
-            let load_result = asset_manager.load_asset(
-                ctx, 
-                &format!("{}_idle_{}", character, i), 
-                &anim_path
-            );
-            
+            let load_result =
+                asset_manager.load_asset(ctx, &format!("{}_idle_{}", character, i), &anim_path);
+
             // If loading fails for Archer, try an alternative path
             if let Err(e) = load_result {
                 if character == "Archer" {
-                    log::warn!("Failed to load Archer idle animation frame {}: {}. Trying alternative path.", i, e);
+                    log::warn!(
+                        "Failed to load Archer idle animation frame {}: {}. Trying alternative path.",
+                        i,
+                        e
+                    );
                     // Try alternative path with correct casing
                     let alt_path = format!(
                         "{}/archer_m_idle_anim/archer_m_idle_anim_f{}.png",
-                        character_path,
-                        i
+                        character_path, i
                     );
                     asset_manager.load_asset(
                         ctx,
@@ -365,23 +360,26 @@ impl GameState {
                 gender.to_lowercase(),
                 i
             );
-            
+
             // Special handling for Archer to ensure assets are loaded correctly
             let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_down_{}", character, i),
                 &run_down_path,
             );
-            
+
             // If loading fails for Archer, try an alternative path
             if let Err(e) = load_result {
                 if character == "Archer" {
-                    log::warn!("Failed to load Archer run down animation frame {}: {}. Trying alternative path.", i, e);
+                    log::warn!(
+                        "Failed to load Archer run down animation frame {}: {}. Trying alternative path.",
+                        i,
+                        e
+                    );
                     // Try alternative path with correct casing
                     let alt_path = format!(
                         "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
-                        character_path,
-                        i
+                        character_path, i
                     );
                     asset_manager.load_asset(
                         ctx,
@@ -403,23 +401,23 @@ impl GameState {
                 gender.to_lowercase(),
                 i
             );
-            
+
             // Special handling for Archer to ensure assets are loaded correctly
-            let load_result = asset_manager.load_asset(
-                ctx,
-                &format!("{}_run_up_{}", character, i),
-                &run_up_path,
-            );
-            
+            let load_result =
+                asset_manager.load_asset(ctx, &format!("{}_run_up_{}", character, i), &run_up_path);
+
             // If loading fails for Archer, try an alternative path
             if let Err(e) = load_result {
                 if character == "Archer" {
-                    log::warn!("Failed to load Archer run up animation frame {}: {}. Trying alternative path.", i, e);
+                    log::warn!(
+                        "Failed to load Archer run up animation frame {}: {}. Trying alternative path.",
+                        i,
+                        e
+                    );
                     // Try alternative path with correct casing
                     let alt_path = format!(
                         "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
-                        character_path,
-                        i
+                        character_path, i
                     );
                     asset_manager.load_asset(
                         ctx,
@@ -441,23 +439,26 @@ impl GameState {
                 gender.to_lowercase(),
                 i
             );
-            
+
             // Special handling for Archer to ensure assets are loaded correctly
             let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_right_{}", character, i),
                 &run_right_path,
             );
-            
+
             // If loading fails for Archer, try an alternative path
             if let Err(e) = load_result {
                 if character == "Archer" {
-                    log::warn!("Failed to load Archer run right animation frame {}: {}. Trying alternative path.", i, e);
+                    log::warn!(
+                        "Failed to load Archer run right animation frame {}: {}. Trying alternative path.",
+                        i,
+                        e
+                    );
                     // Try alternative path with correct casing
                     let alt_path = format!(
                         "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
-                        character_path,
-                        i
+                        character_path, i
                     );
                     asset_manager.load_asset(
                         ctx,
@@ -468,7 +469,7 @@ impl GameState {
                     return Err(e);
                 }
             }
-            
+
             // Left direction (using the same sprite as right for now)
             let run_left_path = format!(
                 "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
@@ -479,23 +480,26 @@ impl GameState {
                 gender.to_lowercase(),
                 i
             );
-            
+
             // Special handling for Archer to ensure assets are loaded correctly
             let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_left_{}", character, i),
                 &run_left_path,
             );
-            
+
             // If loading fails for Archer, try an alternative path
             if let Err(e) = load_result {
                 if character == "Archer" {
-                    log::warn!("Failed to load Archer run left animation frame {}: {}. Trying alternative path.", i, e);
+                    log::warn!(
+                        "Failed to load Archer run left animation frame {}: {}. Trying alternative path.",
+                        i,
+                        e
+                    );
                     // Try alternative path with correct casing
                     let alt_path = format!(
                         "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
-                        character_path,
-                        i
+                        character_path, i
                     );
                     asset_manager.load_asset(
                         ctx,
@@ -510,28 +514,20 @@ impl GameState {
 
         // Load fallback asset
         let fallback_path = format!("{}/{}_{}.png", character_path, character, gender);
-        
+
         // Special handling for Archer to ensure assets are loaded correctly
-        let load_result = asset_manager.load_asset(
-            ctx,
-            character,
-            &fallback_path,
-        );
-        
+        let load_result = asset_manager.load_asset(ctx, character, &fallback_path);
+
         // If loading fails for Archer, try an alternative path
         if let Err(e) = load_result {
             if character == "Archer" {
-                log::warn!("Failed to load Archer fallback asset: {}. Trying alternative path.", e);
-                // Try alternative path with correct casing
-                let alt_path = format!(
-                    "{}/Archer_M.png",
-                    character_path
+                log::warn!(
+                    "Failed to load Archer fallback asset: {}. Trying alternative path.",
+                    e
                 );
-                asset_manager.load_asset(
-                    ctx,
-                    character,
-                    &alt_path,
-                )?;
+                // Try alternative path with correct casing
+                let alt_path = format!("{}/Archer_M.png", character_path);
+                asset_manager.load_asset(ctx, character, &alt_path)?;
             } else {
                 return Err(e);
             }
@@ -553,25 +549,34 @@ impl GameState {
     fn update_pre_auth(&mut self, ctx: &Context) {
         // Handle keyboard input for login fields
         self.handle_login_input(ctx);
-        
+
         // Check for Enter key to submit login/registration
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             if !self.username.is_empty() && !self.password.is_empty() {
                 match self.auth_action {
                     AuthAction::Login => {
-                        log::info!("Sending login for '{}' with password '{}'", self.username, self.password);
+                        log::info!(
+                            "Sending login for '{}' with password '{}'",
+                            self.username,
+                            self.password
+                        );
                         let login_msg = format!("login {} {}\r\n", self.username, self.password);
                         let _ = self.nc.send_str(login_msg);
-                    },
+                    }
                     AuthAction::Register => {
-                        log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
-                        let register_msg = format!("register {} {}\r\n", self.username, self.password);
+                        log::info!(
+                            "Sending registration for '{}' with password '{}'",
+                            self.username,
+                            self.password
+                        );
+                        let register_msg =
+                            format!("register {} {}\r\n", self.username, self.password);
                         let _ = self.nc.send_str(register_msg);
                     }
                 }
             }
         }
-        
+
         // Handle authentication
         let line = self.nc.recv();
         use crate::net::NCError::*;
@@ -581,15 +586,15 @@ impl GameState {
                 // Check if login was successful and transition to InGame
                 if ok.contains("Logged in") || ok.contains("Registered user") {
                     log::info!("Authentication successful, entering game.");
-                    
+
                     // Set the player's name to the username used for login
                     self.players.self_player.name = self.username.clone();
                     log::trace!("Set player name to: {}", self.username);
-                    
+
                     // Send the username to the server for identification
                     let username_msg = format!("username {}\r\n", self.username);
                     let _ = self.nc.send_str(username_msg);
-                    
+
                     // Transition to InGame stage
                     self.stage = Stage::InGame;
                 }
@@ -619,18 +624,19 @@ impl GameState {
                 InputField::ActionType => InputField::Username,
             };
         }
-        
+
         // Handle action type switching with arrow keys when ActionType is focused
         if matches!(self.input_focus, InputField::ActionType) {
-            if ctx.keyboard.is_key_just_pressed(KeyCode::Left) || 
-               ctx.keyboard.is_key_just_pressed(KeyCode::Right) {
+            if ctx.keyboard.is_key_just_pressed(KeyCode::Left)
+                || ctx.keyboard.is_key_just_pressed(KeyCode::Right)
+            {
                 self.auth_action = match self.auth_action {
                     AuthAction::Login => AuthAction::Register,
                     AuthAction::Register => AuthAction::Login,
                 };
             }
         }
-        
+
         // Get the currently focused field if it's a text field
         if !matches!(self.input_focus, InputField::ActionType) {
             let current_field = match self.input_focus {
@@ -638,24 +644,55 @@ impl GameState {
                 InputField::Password => &mut self.password,
                 _ => unreachable!(),
             };
-            
+
             // Handle backspace - use KeyCode::Back instead of Backspace
             if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !current_field.is_empty() {
                 current_field.pop();
             }
-            
+
             // Handle text input
             // This is a simplified approach - in a real app, you'd use a proper text input system
             for key in [
-                KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
-                KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
-                KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
-                KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
-                KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
-                KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
-                KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
-                KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
-            ].iter() {
+                KeyCode::A,
+                KeyCode::B,
+                KeyCode::C,
+                KeyCode::D,
+                KeyCode::E,
+                KeyCode::F,
+                KeyCode::G,
+                KeyCode::H,
+                KeyCode::I,
+                KeyCode::J,
+                KeyCode::K,
+                KeyCode::L,
+                KeyCode::M,
+                KeyCode::N,
+                KeyCode::O,
+                KeyCode::P,
+                KeyCode::Q,
+                KeyCode::R,
+                KeyCode::S,
+                KeyCode::T,
+                KeyCode::U,
+                KeyCode::V,
+                KeyCode::W,
+                KeyCode::X,
+                KeyCode::Y,
+                KeyCode::Z,
+                KeyCode::Key1,
+                KeyCode::Key2,
+                KeyCode::Key3,
+                KeyCode::Key4,
+                KeyCode::Key5,
+                KeyCode::Key6,
+                KeyCode::Key7,
+                KeyCode::Key8,
+                KeyCode::Key9,
+                KeyCode::Key0,
+                KeyCode::Underline,
+            ]
+            .iter()
+            {
                 if ctx.keyboard.is_key_just_pressed(*key) {
                     let char_to_add = match key {
                         KeyCode::A => 'a',
@@ -697,7 +734,7 @@ impl GameState {
                         KeyCode::Underline => '_',
                         _ => continue,
                     };
-                    
+
                     // Add the character to the current field
                     current_field.push(char_to_add);
                 }
@@ -713,22 +750,23 @@ impl GameState {
                 // Send the chat message when exiting chat mode if there's a message
                 let chat_msg = format!("chat {}\r\n", self.chat_input);
                 let _ = self.nc.send_str(chat_msg);
-                
+
                 // Also display the message for the local player
-                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
-                
+                self.players
+                    .set_player_chat_message(&self.username, self.chat_input.clone());
+
                 // Clear the chat input
                 self.chat_input.clear();
             }
         }
-        
+
         // Get the delta time for animations
         let delta_time = ctx.time.delta().as_secs_f32();
-        
+
         // Handle chat input if in chat mode
         if self.is_chatting {
             self.handle_chat_input(ctx);
-            
+
             // Even when chatting, we still need to update other players' animations
             // Create a no-movement state for the local player
             let no_movement = MovementState {
@@ -737,9 +775,10 @@ impl GameState {
                 dx: 0,
                 dy: 0,
             };
-            
+
             // Update player animations but not position
-            self.players.update(&no_movement, &self.map, GRID_SIZE, delta_time);
+            self.players
+                .update(&no_movement, &self.map, GRID_SIZE, delta_time);
         } else {
             // Only process normal game input if not chatting
             // Get input
@@ -747,10 +786,16 @@ impl GameState {
             let key_press = input::handle_key_press(ctx);
 
             // Send movement to server
-            input::send_movement_to_server(&mut self.nc, &movement, &self.username, &self.players.self_player.pos);
+            input::send_movement_to_server(
+                &mut self.nc,
+                &movement,
+                &self.username,
+                &self.players.self_player.pos,
+            );
 
             // Update player position
-            self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+            self.players
+                .update(&movement, &self.map, GRID_SIZE, delta_time);
 
             // Handle character switching
             if key_press.switch_character {
@@ -759,19 +804,18 @@ impl GameState {
 
             // Check for door transitions
             let player_pos = self.players.self_player.pos;
-            if let Some((new_room, new_x, new_y, facing)) = self.map.check_door_transition(
-                player_pos.x,
-                player_pos.y,
-                GRID_SIZE,
-            ) {
+            if let Some((new_room, new_x, new_y, facing)) =
+                self.map
+                    .check_door_transition(player_pos.x, player_pos.y, GRID_SIZE)
+            {
                 // Update the current room
                 self.map.current_room = new_room;
-                
+
                 // Update player position to the new coordinates
                 self.players.self_player.pos.x = new_x as i32;
                 self.players.self_player.pos.y = new_y as i32;
                 self.players.self_player.direction = facing;
-                
+
                 // Send the new position to the server
                 self.send_absolute_position();
             }
@@ -782,27 +826,28 @@ impl GameState {
             self.process_network_messages();
         }
     }
-    
+
     // Helper method to send the player's absolute position to the server
     fn send_absolute_position(&mut self) {
         // Send username for identification
         let username_msg = format!("username {}\r\n", self.username);
         let _ = self.nc.send_str(username_msg);
-        
+
         // Send current facing direction
         let facing_msg = format!("face {}\r\n", self.players.self_player.direction);
         let _ = self.nc.send_str(facing_msg);
-        
+
         // Send absolute position
-        let move_msg = format!("pos {} {}\r\n", 
-            self.players.self_player.pos.x, 
-            self.players.self_player.pos.y
+        let move_msg = format!(
+            "pos {} {}\r\n",
+            self.players.self_player.pos.x, self.players.self_player.pos.y
         );
         let _ = self.nc.send_str(move_msg);
-        
+
         // Log the position being sent
-        log::trace!("Sending absolute position: ({}, {})", 
-            self.players.self_player.pos.x, 
+        log::trace!(
+            "Sending absolute position: ({}, {})",
+            self.players.self_player.pos.x,
             self.players.self_player.pos.y
         );
     }
@@ -813,25 +858,25 @@ impl GameState {
         if self.nc.is_offline() {
             return;
         }
-        
+
         // Process all available messages in a loop
         let mut message_count = 0;
         let max_messages_per_frame = 10; // Limit to prevent infinite loops
-        
+
         loop {
             // Try to receive a message from the server
             match self.nc.recv() {
                 Ok(message) => {
                     message_count += 1;
-                    
+
                     // Skip "Invalid protocol" messages
                     if message.contains("Invalid protocol") {
                         continue;
                     }
-                    
+
                     // Log raw messages for debugging
                     log::trace!("Raw server message: {}", message);
-                    
+
                     // Parse the message to see if it's a player update
                     if let Some(server_message) = self.nc.parse_server_message(&message) {
                         match server_message {
@@ -841,64 +886,83 @@ impl GameState {
                                     log::info!("Skipping own player joined message: {}", username);
                                     continue;
                                 }
-                                
-                                log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
-                                self.players.add_or_update_player(username, position, facing);
-                                
+
+                                log::info!(
+                                    "Player joined: {} at ({}, {})",
+                                    username,
+                                    position.x,
+                                    position.y
+                                );
+                                self.players
+                                    .add_or_update_player(username, position, facing);
+
                                 // Debug print all players
                                 self.players.debug_print_players();
-                            },
+                            }
                             protocol::ServerToClient::PlayerLeft(username) => {
                                 log::info!("Player left: {}", username);
                                 self.players.remove_player(&username);
-                                
+
                                 // Debug print all players
                                 self.players.debug_print_players();
-                            },
+                            }
                             protocol::ServerToClient::PlayerMoved(username, position, facing) => {
                                 // Skip if this is our own username
                                 if username == self.username {
                                     log::trace!("Skipping own player moved message: {}", username);
                                     continue;
                                 }
-                                
+
                                 // Only log position updates if the position is not (0,0)
                                 // This is to avoid logging facing-only updates
                                 if position.x != 0 || position.y != 0 {
-                                    log::trace!("Player moved: {} to ({}, {})", username, position.x, position.y);
+                                    log::trace!(
+                                        "Player moved: {} to ({}, {})",
+                                        username,
+                                        position.x,
+                                        position.y
+                                    );
                                 }
-                                
+
                                 // Update the player's position and facing
-                                self.players.update_player_position(&username, position, facing);
-                            },
+                                self.players
+                                    .update_player_position(&username, position, facing);
+                            }
                             protocol::ServerToClient::ChatMessage(username, message) => {
                                 log::info!("Chat message from {}: {}", username, message);
-                                
+
                                 // Display the chat message above the player
                                 self.players.set_player_chat_message(&username, message);
-                            },
+                            }
                             _ => {
                                 log::info!("Received other message type: {:?}", server_message);
                             }
                         }
-                    } else if message.contains("player_joined") || message.contains("player_moved") {
+                    } else if message.contains("player_joined") || message.contains("player_moved")
+                    {
                         // Try to extract the username and position manually
                         let parts: Vec<&str> = message.split_whitespace().collect();
                         log::trace!("Message parts: {:?}", parts);
-                        
+
                         if parts.len() >= 5 {
-                            if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
+                            if let Some(pos) = parts
+                                .iter()
+                                .position(|&p| p == "player_joined" || p == "player_moved")
+                            {
                                 if pos + 4 < parts.len() {
                                     let cmd = parts[pos];
                                     let username = parts[pos + 1].to_string();
-                                    
+
                                     // Skip if this is our own username
                                     if username == self.username {
                                         log::info!("Skipping own player message: {}", username);
                                         continue;
                                     }
-                                    
-                                    if let (Ok(x), Ok(y)) = (parts[pos + 2].parse::<i32>(), parts[pos + 3].parse::<i32>()) {
+
+                                    if let (Ok(x), Ok(y)) = (
+                                        parts[pos + 2].parse::<i32>(),
+                                        parts[pos + 3].parse::<i32>(),
+                                    ) {
                                         let facing_str = parts[pos + 4];
                                         let facing = match facing_str {
                                             "North" => protocol::Facing::North,
@@ -907,30 +971,43 @@ impl GameState {
                                             "West" => protocol::Facing::West,
                                             _ => protocol::Facing::South,
                                         };
-                                        
+
                                         let position = protocol::Position::new(x, y);
-                                        
+
                                         if cmd == "player_joined" {
-                                            log::trace!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
-                                            self.players.add_or_update_player(username, position, facing);
-                                            
+                                            log::trace!(
+                                                "Manual parse - Player joined: {} at ({}, {})",
+                                                username,
+                                                x,
+                                                y
+                                            );
+                                            self.players
+                                                .add_or_update_player(username, position, facing);
+
                                             // Debug print all players
                                             self.players.debug_print_players();
                                         } else {
-                                            log::trace!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
-                                            self.players.update_player_position(&username, position, facing);
+                                            log::trace!(
+                                                "Manual parse - Player moved: {} to ({}, {})",
+                                                username,
+                                                x,
+                                                y
+                                            );
+                                            self.players.update_player_position(
+                                                &username, position, facing,
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     // Break if we've processed too many messages in one frame
                     if message_count >= max_messages_per_frame {
                         break;
                     }
-                },
+                }
                 Err(_) => {
                     // No more messages to process
                     break;
@@ -945,20 +1022,21 @@ impl GameState {
             self.is_chatting = !self.is_chatting;
             if !self.is_chatting && !self.chat_input.is_empty() {
                 // Display the message for the local player
-                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
-                
+                self.players
+                    .set_player_chat_message(&self.username, self.chat_input.clone());
+
                 // Clear the chat input
                 self.chat_input.clear();
             }
         }
-        
+
         // Get the delta time for animations
         let delta_time = ctx.time.delta().as_secs_f32();
-        
+
         // Handle chat input if in chat mode
         if self.is_chatting {
             self.handle_chat_input(ctx);
-            
+
             // Even when chatting, we still need to update other players' animations
             // Create a no-movement state for the local player
             let no_movement = MovementState {
@@ -967,16 +1045,18 @@ impl GameState {
                 dx: 0,
                 dy: 0,
             };
-            
+
             // Update player animations but not position
-            self.players.update(&no_movement, &self.map, GRID_SIZE, delta_time);
+            self.players
+                .update(&no_movement, &self.map, GRID_SIZE, delta_time);
         } else {
             // Handle input
             let movement = input::handle_input(ctx);
             let key_press = input::handle_key_press(ctx);
 
             // Update player position
-            self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+            self.players
+                .update(&movement, &self.map, GRID_SIZE, delta_time);
 
             // Handle character switching
             if key_press.switch_character {
@@ -985,10 +1065,13 @@ impl GameState {
 
             // Check for door transitions
             let player_pos = self.players.self_player.pos;
-            if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
+            if let Some((new_room, door_x, door_y, facing)) =
+                self.map
+                    .check_door_transition(player_pos.x, player_pos.y, GRID_SIZE)
+            {
                 // Update the current room
                 self.map.current_room = new_room;
-                
+
                 // Update player position to the new coordinates
                 self.players.self_player.pos.x = door_x as i32;
                 self.players.self_player.pos.y = door_y as i32;
@@ -999,38 +1082,46 @@ impl GameState {
         // Simulate other players in offline mode
         self.simulate_other_players(delta_time);
     }
-    
+
     // New method to simulate other players in offline mode
     fn simulate_other_players(&mut self, delta_time: f32) {
         // Only add simulated players if we don't have any yet
         if self.players.other_players.is_empty() {
             // Add a simulated player that moves around
             let start_pos = protocol::Position::new(
-                (GRID_SIZE as f32 * 3.5) as i32, 
-                (GRID_SIZE as f32 * 3.5) as i32
+                (GRID_SIZE as f32 * 3.5) as i32,
+                (GRID_SIZE as f32 * 3.5) as i32,
             );
-            self.players.add_or_update_player("SimPlayer".to_string(), start_pos, protocol::Facing::South);
-            
+            self.players.add_or_update_player(
+                "SimPlayer".to_string(),
+                start_pos,
+                protocol::Facing::South,
+            );
+
             // Add another simulated player that stays still
             let start_pos2 = protocol::Position::new(
-                (GRID_SIZE as f32 * 5.5) as i32, 
-                (GRID_SIZE as f32 * 2.5) as i32
+                (GRID_SIZE as f32 * 5.5) as i32,
+                (GRID_SIZE as f32 * 2.5) as i32,
             );
-            self.players.add_or_update_player("StaticPlayer".to_string(), start_pos2, protocol::Facing::East);
+            self.players.add_or_update_player(
+                "StaticPlayer".to_string(),
+                start_pos2,
+                protocol::Facing::East,
+            );
         }
-        
+
         // Make the simulated player move in a pattern
         static mut MOVE_TIMER: f32 = 0.0;
         static mut DIRECTION: i32 = 0;
-        
+
         unsafe {
             MOVE_TIMER += delta_time;
-            
+
             // Change direction every 2 seconds
             if MOVE_TIMER > 2.0 {
                 MOVE_TIMER = 0.0;
                 DIRECTION = (DIRECTION + 1) % 4;
-                
+
                 // Find the simulated player
                 for player in &mut self.players.other_players {
                     if player.name == "SimPlayer" {
@@ -1042,7 +1133,7 @@ impl GameState {
                             3 => protocol::Facing::West,
                             _ => protocol::Facing::South,
                         };
-                        
+
                         // Move the player in that direction
                         let (dx, dy) = match player.direction {
                             protocol::Facing::North => (0, -1),
@@ -1050,15 +1141,15 @@ impl GameState {
                             protocol::Facing::South => (0, 1),
                             protocol::Facing::West => (-1, 0),
                         };
-                        
+
                         player.pos.x += dx * GRID_SIZE;
                         player.pos.y += dy * GRID_SIZE;
                         player.is_moving = true;
-                        
+
                         // Keep the player within bounds
                         player.pos.x = player.pos.x.max(GRID_SIZE).min(GRID_SIZE * 10);
                         player.pos.y = player.pos.y.max(GRID_SIZE).min(GRID_SIZE * 10);
-                        
+
                         break;
                     }
                 }
@@ -1101,21 +1192,25 @@ impl GameState {
             graphics::DrawMode::fill(),
             Rect::new(0.0, 0.0, screen_width, screen_height),
             bg_color,
-        ).unwrap();
+        )
+        .unwrap();
         canvas.draw(&bg_rect, DrawParam::default());
 
         // Draw title
         let title_text = Text::new("Login / Register");
         let title_dimensions = title_text.dimensions(ctx).unwrap();
         let title_width = title_dimensions.w;
-        
+
         canvas.draw(
             &title_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - title_width / 2.0, screen_height / 2.0 - 100.0])
+                .dest([
+                    screen_width / 2.0 - title_width / 2.0,
+                    screen_height / 2.0 - 100.0,
+                ])
                 .color(Color::WHITE),
         );
-        
+
         // Draw username field
         let username_label = Text::new("Username:");
         canvas.draw(
@@ -1124,22 +1219,28 @@ impl GameState {
                 .dest([screen_width / 2.0 - 150.0, screen_height / 2.0 - 40.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw username input box
         let username_box_color = if matches!(self.input_focus, InputField::Username) {
             Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
         } else {
             Color::new(0.2, 0.2, 0.4, 1.0) // Normal
         };
-        
+
         let username_box = graphics::Mesh::new_rectangle(
             ctx,
             graphics::DrawMode::fill(),
-            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 - 45.0, 200.0, 30.0),
+            Rect::new(
+                screen_width / 2.0 - 50.0,
+                screen_height / 2.0 - 45.0,
+                200.0,
+                30.0,
+            ),
             username_box_color,
-        ).unwrap();
+        )
+        .unwrap();
         canvas.draw(&username_box, DrawParam::default());
-        
+
         // Draw username text
         let username_text = Text::new(&self.username);
         canvas.draw(
@@ -1148,7 +1249,7 @@ impl GameState {
                 .dest([screen_width / 2.0 - 40.0, screen_height / 2.0 - 40.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw password field
         let password_label = Text::new("Password:");
         canvas.draw(
@@ -1157,22 +1258,28 @@ impl GameState {
                 .dest([screen_width / 2.0 - 150.0, screen_height / 2.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw password input box
         let password_box_color = if matches!(self.input_focus, InputField::Password) {
             Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
         } else {
             Color::new(0.2, 0.2, 0.4, 1.0) // Normal
         };
-        
+
         let password_box = graphics::Mesh::new_rectangle(
             ctx,
             graphics::DrawMode::fill(),
-            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 - 5.0, 200.0, 30.0),
+            Rect::new(
+                screen_width / 2.0 - 50.0,
+                screen_height / 2.0 - 5.0,
+                200.0,
+                30.0,
+            ),
             password_box_color,
-        ).unwrap();
+        )
+        .unwrap();
         canvas.draw(&password_box, DrawParam::default());
-        
+
         // Draw password text (masked with asterisks)
         let masked_password = "*".repeat(self.password.len());
         let password_text = Text::new(&masked_password);
@@ -1182,7 +1289,7 @@ impl GameState {
                 .dest([screen_width / 2.0 - 40.0, screen_height / 2.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw action type selection (Login/Register)
         let action_label = Text::new("Action:");
         canvas.draw(
@@ -1191,22 +1298,28 @@ impl GameState {
                 .dest([screen_width / 2.0 - 150.0, screen_height / 2.0 + 40.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw action type selection box
         let action_box_color = if matches!(self.input_focus, InputField::ActionType) {
             Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
         } else {
             Color::new(0.2, 0.2, 0.4, 1.0) // Normal
         };
-        
+
         let action_box = graphics::Mesh::new_rectangle(
             ctx,
             graphics::DrawMode::fill(),
-            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 + 35.0, 200.0, 30.0),
+            Rect::new(
+                screen_width / 2.0 - 50.0,
+                screen_height / 2.0 + 35.0,
+                200.0,
+                30.0,
+            ),
             action_box_color,
-        ).unwrap();
+        )
+        .unwrap();
         canvas.draw(&action_box, DrawParam::default());
-        
+
         // Draw current action type
         let action_text = match self.auth_action {
             AuthAction::Login => "Login",
@@ -1219,40 +1332,49 @@ impl GameState {
                 .dest([screen_width / 2.0 - 40.0, screen_height / 2.0 + 40.0])
                 .color(Color::WHITE),
         );
-        
+
         // Draw instructions
         let instructions_text = Text::new("Press Enter to submit");
         let instructions_dimensions = instructions_text.dimensions(ctx).unwrap();
         let instructions_width = instructions_dimensions.w;
-        
+
         canvas.draw(
             &instructions_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - instructions_width / 2.0, screen_height / 2.0 + 80.0])
+                .dest([
+                    screen_width / 2.0 - instructions_width / 2.0,
+                    screen_height / 2.0 + 80.0,
+                ])
                 .color(Color::YELLOW),
         );
-        
+
         // Draw tab instruction
         let tab_text = Text::new("Press Tab to switch fields");
         let tab_dimensions = tab_text.dimensions(ctx).unwrap();
         let tab_width = tab_dimensions.w;
-        
+
         canvas.draw(
             &tab_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - tab_width / 2.0, screen_height / 2.0 + 110.0])
+                .dest([
+                    screen_width / 2.0 - tab_width / 2.0,
+                    screen_height / 2.0 + 110.0,
+                ])
                 .color(Color::YELLOW),
         );
-        
+
         // Draw arrow key instruction for action type
         let arrow_text = Text::new("Use Left/Right arrows to change action type");
         let arrow_dimensions = arrow_text.dimensions(ctx).unwrap();
         let arrow_width = arrow_dimensions.w;
-        
+
         canvas.draw(
             &arrow_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - arrow_width / 2.0, screen_height / 2.0 + 140.0])
+                .dest([
+                    screen_width / 2.0 - arrow_width / 2.0,
+                    screen_height / 2.0 + 140.0,
+                ])
                 .color(Color::YELLOW),
         );
     }
@@ -1273,7 +1395,12 @@ impl GameState {
         let camera_y = player_center_y - zoomed_height as i32 / 2;
 
         // Set the camera view
-        canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        canvas.set_screen_coordinates(Rect::new(
+            camera_x as f32,
+            camera_y as f32,
+            zoomed_width,
+            zoomed_height,
+        ));
 
         // Draw the map first (so it's behind the player)
         self.map
@@ -1296,21 +1423,22 @@ impl GameState {
                 .dest([(camera_x + 10) as f32, (camera_y + 10) as f32])
                 .color(Color::WHITE),
         );
-        
+
         // Draw chat input box if in chat mode
         if self.is_chatting {
             // Switch to screen coordinates for UI elements
             canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
-            
+
             // Draw chat input background
             let chat_bg = graphics::Mesh::new_rectangle(
                 ctx,
                 graphics::DrawMode::fill(),
                 Rect::new(10.0, screen_height - 40.0, screen_width - 20.0, 30.0),
                 Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
-            ).unwrap();
+            )
+            .unwrap();
             canvas.draw(&chat_bg, DrawParam::default());
-            
+
             // Draw chat input text
             let chat_text = Text::new(format!("Chat: {}", self.chat_input));
             canvas.draw(
@@ -1319,7 +1447,7 @@ impl GameState {
                     .dest([20.0, screen_height - 35.0])
                     .color(Color::WHITE),
             );
-            
+
             // Draw chat instructions
             let chat_instructions = Text::new("Press Enter to send, Esc to cancel");
             canvas.draw(
@@ -1328,14 +1456,19 @@ impl GameState {
                     .dest([20.0, screen_height - 60.0])
                     .color(Color::YELLOW),
             );
-            
+
             // Reset to game coordinates
-            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+            canvas.set_screen_coordinates(Rect::new(
+                camera_x as f32,
+                camera_y as f32,
+                zoomed_width,
+                zoomed_height,
+            ));
         } else {
             // Draw chat hint when not in chat mode
             // Switch to screen coordinates for UI elements
             canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
-            
+
             let chat_hint = Text::new("Press ~ to chat");
             canvas.draw(
                 &chat_hint,
@@ -1343,9 +1476,14 @@ impl GameState {
                     .dest([20.0, screen_height - 30.0])
                     .color(Color::YELLOW),
             );
-            
+
             // Reset to game coordinates
-            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+            canvas.set_screen_coordinates(Rect::new(
+                camera_x as f32,
+                camera_y as f32,
+                zoomed_width,
+                zoomed_height,
+            ));
         }
     }
 
@@ -1365,7 +1503,12 @@ impl GameState {
         let camera_y = player_center_y - zoomed_height as i32 / 2;
 
         // Set the camera view
-        canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        canvas.set_screen_coordinates(Rect::new(
+            camera_x as f32,
+            camera_y as f32,
+            zoomed_width,
+            zoomed_height,
+        ));
 
         // Draw the map first (so it's behind the player)
         self.map
@@ -1388,21 +1531,22 @@ impl GameState {
                 .dest([(camera_x + 10) as f32, (camera_y + 10) as f32])
                 .color(Color::WHITE),
         );
-        
+
         // Draw chat input box if in chat mode
         if self.is_chatting {
             // Switch to screen coordinates for UI elements
             canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
-            
+
             // Draw chat input background
             let chat_bg = graphics::Mesh::new_rectangle(
                 ctx,
                 graphics::DrawMode::fill(),
                 Rect::new(10.0, screen_height - 40.0, screen_width - 20.0, 30.0),
                 Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
-            ).unwrap();
+            )
+            .unwrap();
             canvas.draw(&chat_bg, DrawParam::default());
-            
+
             // Draw chat input text
             let chat_text = Text::new(format!("Chat: {}", self.chat_input));
             canvas.draw(
@@ -1411,7 +1555,7 @@ impl GameState {
                     .dest([20.0, screen_height - 35.0])
                     .color(Color::WHITE),
             );
-            
+
             // Draw chat instructions
             let chat_instructions = Text::new("Press Enter to send, Esc to cancel");
             canvas.draw(
@@ -1420,14 +1564,19 @@ impl GameState {
                     .dest([20.0, screen_height - 60.0])
                     .color(Color::YELLOW),
             );
-            
+
             // Reset to game coordinates
-            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+            canvas.set_screen_coordinates(Rect::new(
+                camera_x as f32,
+                camera_y as f32,
+                zoomed_width,
+                zoomed_height,
+            ));
         } else {
             // Draw chat hint when not in chat mode
             // Switch to screen coordinates for UI elements
             canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
-            
+
             let chat_hint = Text::new("Press ~ to chat");
             canvas.draw(
                 &chat_hint,
@@ -1435,11 +1584,16 @@ impl GameState {
                     .dest([20.0, screen_height - 30.0])
                     .color(Color::YELLOW),
             );
-            
+
             // Reset to game coordinates
-            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+            canvas.set_screen_coordinates(Rect::new(
+                camera_x as f32,
+                camera_y as f32,
+                zoomed_width,
+                zoomed_height,
+            ));
         }
-        
+
         // Draw offline mode indicator
         self.draw_offline_indicator(ctx, canvas);
     }
@@ -1447,7 +1601,7 @@ impl GameState {
     fn draw_offline_indicator(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
         // Draw offline mode indicator in the top-right corner
         let screen_width = ctx.gfx.window().inner_size().width as f32;
-        
+
         let text = Text::new("OFFLINE MODE");
         let text_pos = [screen_width - 120.0, 10.0];
         canvas.draw(
@@ -1466,10 +1620,11 @@ impl GameState {
                     let chat_msg = format!("chat {}\r\n", self.chat_input);
                     let _ = self.nc.send_str(chat_msg);
                 }
-                
+
                 // Always display the message for the local player
-                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
-                
+                self.players
+                    .set_player_chat_message(&self.username, self.chat_input.clone());
+
                 // Clear the chat input and exit chat mode
                 self.chat_input.clear();
                 self.is_chatting = false;
@@ -1479,33 +1634,72 @@ impl GameState {
             }
             return;
         }
-        
+
         // Handle Escape key to cancel chat
         if ctx.keyboard.is_key_just_pressed(KeyCode::Escape) {
             self.chat_input.clear();
             self.is_chatting = false;
             return;
         }
-        
+
         // Handle backspace
         if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !self.chat_input.is_empty() {
             self.chat_input.pop();
         }
-        
+
         // Handle text input
         for key in [
-            KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
-            KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
-            KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
-            KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
-            KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
-            KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
-            KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
-            KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
-            KeyCode::Space, KeyCode::Comma, KeyCode::Period, KeyCode::Slash,
-            KeyCode::Semicolon, KeyCode::Apostrophe, KeyCode::LBracket, KeyCode::RBracket,
-            KeyCode::Backslash, KeyCode::Minus, KeyCode::Equals,
-        ].iter() {
+            KeyCode::A,
+            KeyCode::B,
+            KeyCode::C,
+            KeyCode::D,
+            KeyCode::E,
+            KeyCode::F,
+            KeyCode::G,
+            KeyCode::H,
+            KeyCode::I,
+            KeyCode::J,
+            KeyCode::K,
+            KeyCode::L,
+            KeyCode::M,
+            KeyCode::N,
+            KeyCode::O,
+            KeyCode::P,
+            KeyCode::Q,
+            KeyCode::R,
+            KeyCode::S,
+            KeyCode::T,
+            KeyCode::U,
+            KeyCode::V,
+            KeyCode::W,
+            KeyCode::X,
+            KeyCode::Y,
+            KeyCode::Z,
+            KeyCode::Key1,
+            KeyCode::Key2,
+            KeyCode::Key3,
+            KeyCode::Key4,
+            KeyCode::Key5,
+            KeyCode::Key6,
+            KeyCode::Key7,
+            KeyCode::Key8,
+            KeyCode::Key9,
+            KeyCode::Key0,
+            KeyCode::Underline,
+            KeyCode::Space,
+            KeyCode::Comma,
+            KeyCode::Period,
+            KeyCode::Slash,
+            KeyCode::Semicolon,
+            KeyCode::Apostrophe,
+            KeyCode::LBracket,
+            KeyCode::RBracket,
+            KeyCode::Backslash,
+            KeyCode::Minus,
+            KeyCode::Equals,
+        ]
+        .iter()
+        {
             if ctx.keyboard.is_key_just_pressed(*key) {
                 let char_to_add = match key {
                     KeyCode::A => 'a',
@@ -1558,7 +1752,7 @@ impl GameState {
                     KeyCode::Underline => '_',
                     _ => continue,
                 };
-                
+
                 // Add the character to the chat input
                 self.chat_input.push(char_to_add);
             }

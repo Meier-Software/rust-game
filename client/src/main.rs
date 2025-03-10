@@ -34,10 +34,12 @@ pub fn main() -> GameResult {
     // Parse command line arguments
     let args: Vec<String> = env::args().collect();
     let offline_mode = args.iter().any(|arg| arg == "--offline" || arg == "-o");
-    
+
     // Check for export map argument
-    let export_map = args.iter().position(|arg| arg == "--export-map" || arg == "-e");
-    
+    let export_map = args
+        .iter()
+        .position(|arg| arg == "--export-map" || arg == "-e");
+
     // If export map argument is provided, create a map and export it to JSON
     if let Some(pos) = export_map {
         // Get the output path, default to "map.json" if not provided
@@ -46,7 +48,7 @@ pub fn main() -> GameResult {
         } else {
             "map.json"
         };
-        
+
         println!("Exporting map to {}", output_path);
         let map = map::Map::new();
         if let Err(e) = map.to_json(output_path) {
@@ -56,10 +58,12 @@ pub fn main() -> GameResult {
         println!("Map exported successfully!");
         std::process::exit(0);
     }
-    
+
     // Check for import map argument
-    let import_map = args.iter().position(|arg| arg == "--import-map" || arg == "-i");
-    
+    let import_map = args
+        .iter()
+        .position(|arg| arg == "--import-map" || arg == "-i");
+
     // Store the path to the map file if import is requested
     let map_path = if let Some(pos) = import_map {
         if pos + 1 < args.len() && !args[pos + 1].starts_with('-') {
@@ -78,7 +82,7 @@ pub fn main() -> GameResult {
         println!("Note: You can run in offline mode with '--offline' or '-o' flag");
         println!("Example: cargo r --bin client -- --offline");
     }
-    
+
     // Print a message about exporting and importing the map
     println!("Note: You can export the map to JSON with '--export-map' or '-e' flag");
     println!("Example: cargo r --bin client -- --export-map [output_path]");
@@ -110,7 +114,7 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir);
 
     let (mut ctx, event_loop) = cb.build()?;
-    
+
     // Create game state based on mode and map import
     let state = if let Some(path) = map_path {
         // Import map and create game state
@@ -122,7 +126,7 @@ pub fn main() -> GameResult {
                 } else {
                     GameState::new_with_map(&mut ctx, imported_map)
                 }
-            },
+            }
             Err(e) => {
                 eprintln!("Error importing map: {}", e);
                 std::process::exit(1);

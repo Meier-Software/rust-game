@@ -1,7 +1,6 @@
 use ggez::{
-    Context,
+    Context, GameResult,
     graphics::{self, Drawable},
-    GameResult,
 };
 use protocol::{Facing, Position};
 
@@ -202,14 +201,14 @@ impl Player {
 
             // Use a smaller scale factor to make the sprite half the size
             let scale_factor = 0.75;
-            
+
             // Calculate the scaled width for potential use in flipping and positioning
             let scaled_width = hero_asset.img.width() as f32 * scale_factor;
-            
+
             // Draw the hero sprite at the correct position
-            let mut draw_params = graphics::DrawParam::default()
-                .dest([self.pos.x as f32, self.pos.y as f32]);
-                
+            let mut draw_params =
+                graphics::DrawParam::default().dest([self.pos.x as f32, self.pos.y as f32]);
+
             // Apply scaling
             if flip_x {
                 // For flipped sprites, we need to adjust the destination point
@@ -224,69 +223,67 @@ impl Player {
             // Special handling for Archer character - adjust position if needed
             if character == "Archer" {
                 // Only adjust the Y position for Archer to center it vertically
-                let y_offset = 4.0;  // Adjust y position for Archer
-                
+                let y_offset = 4.0; // Adjust y position for Archer
+
                 // Get the current x position (which already accounts for flipping if needed)
                 let x_pos = if flip_x {
                     self.pos.x as f32 + scaled_width
                 } else {
                     self.pos.x as f32
                 };
-                
+
                 // Apply the y offset while preserving the x position
                 draw_params = draw_params.dest([x_pos, self.pos.y as f32 - y_offset]);
             }
 
             canvas.draw(&hero_asset.img, draw_params);
-            
+
             // Calculate the center position for text elements
             let center_x = self.pos.x as f32 + (hero_asset.img.width() as f32 * scale_factor / 2.0);
-            
+
             // Draw player name above the sprite
             let name_text = graphics::Text::new(&self.name);
             let name_width = name_text.dimensions(ctx).unwrap().w;
             canvas.draw(
                 &name_text,
                 graphics::DrawParam::default()
-                    .dest([
-                        center_x - (name_width / 2.0),
-                        self.pos.y as f32 - 20.0
-                    ])
+                    .dest([center_x - (name_width / 2.0), self.pos.y as f32 - 20.0])
                     .color(graphics::Color::WHITE),
             );
-            
+
             // Draw chat message above the player name if there is one
             if let Some(message) = &self.chat_message {
                 // Create a chat bubble with the message
                 let chat_text = graphics::Text::new(message);
                 let chat_width = chat_text.dimensions(ctx).unwrap().w;
                 let chat_height = chat_text.dimensions(ctx).unwrap().h;
-                
+
                 // Draw chat bubble background
                 let bubble_padding = 5.0;
                 let bubble_rect = graphics::Rect::new(
                     center_x - (chat_width / 2.0) - bubble_padding,
                     self.pos.y as f32 - 45.0 - chat_height,
                     chat_width + (bubble_padding * 2.0),
-                    chat_height + (bubble_padding * 2.0)
+                    chat_height + (bubble_padding * 2.0),
                 );
-                
+
                 let bubble = graphics::Mesh::new_rectangle(
                     ctx,
                     graphics::DrawMode::fill(),
                     bubble_rect,
                     graphics::Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
-                ).unwrap();
-                
+                )
+                .unwrap();
+
                 canvas.draw(&bubble, graphics::DrawParam::default());
-                
+
                 // Draw chat message text
                 canvas.draw(
                     &chat_text,
                     graphics::DrawParam::default()
                         .dest([
                             center_x - (chat_width / 2.0),
-                            self.pos.y as f32 - 45.0 - chat_height + bubble_padding
+                            self.pos.y as f32 - 45.0 - chat_height + bubble_padding,
                         ])
                         .color(graphics::Color::WHITE),
                 );
@@ -294,15 +291,15 @@ impl Player {
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
-            
+
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
                 // Use a smaller scale factor for the fallback sprite as well
                 let scale_factor = 0.75;
-                
+
                 let draw_params = graphics::DrawParam::default()
                     .dest([self.pos.x as f32, self.pos.y as f32])
                     .scale([scale_factor, scale_factor]);
-                    
+
                 canvas.draw(&player_asset.img, draw_params);
             } else {
                 // Draw a colored rectangle as a fallback to make the player visible
@@ -313,7 +310,7 @@ impl Player {
                     CharacterType::Lizard => graphics::Color::YELLOW,
                     CharacterType::Wizard => graphics::Color::MAGENTA,
                 };
-                
+
                 // Draw a simple rectangle using the canvas's rectangle drawing method
                 // Make the rectangle half the size as well
                 let rect_size = PLAYER_SIZE as f32 * 0.75;
@@ -322,7 +319,7 @@ impl Player {
                     graphics::DrawParam::default()
                         .dest([self.pos.x as f32, self.pos.y as f32])
                         .scale([rect_size, rect_size])
-                        .color(color)
+                        .color(color),
                 );
             }
         }
@@ -357,7 +354,7 @@ impl Players {
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
         self.self_player
             .update(movement, map, grid_size, delta_time);
-            
+
         // Also update other players with the same delta time
         for player in &mut self.other_players {
             // For other players, we don't apply movement from local input
@@ -375,9 +372,9 @@ impl Players {
     pub fn switch_character(&mut self) {
         self.self_player.switch_character();
     }
-    
+
     // New methods for multiplayer support
-    
+
     // Add a new player or update an existing one
     pub fn add_or_update_player(&mut self, name: String, pos: Position, facing: Facing) {
         // Check if player already exists
@@ -390,18 +387,18 @@ impl Players {
                 return;
             }
         }
-        
+
         // Player doesn't exist, add a new one
         let mut new_player = Player::new(name, pos);
         new_player.direction = facing;
         self.other_players.push(new_player);
     }
-    
+
     // Remove a player by name
     pub fn remove_player(&mut self, name: &str) {
         self.other_players.retain(|player| player.name != name);
     }
-    
+
     // Update a player's position and facing
     pub fn update_player_position(&mut self, name: &str, pos: Position, facing: Facing) {
         for player in &mut self.other_players {
@@ -414,18 +411,29 @@ impl Players {
                 return;
             }
         }
-        
+
         // If we didn't find the player, add them
         self.add_or_update_player(name.to_string(), pos, facing);
     }
-    
+
     // Debug method to print all players
     pub fn debug_print_players(&self) {
         log::info!("--- Current Players ---");
-        log::info!("Self: {} at ({}, {})", self.self_player.name, self.self_player.pos.x, self.self_player.pos.y);
-        
+        log::info!(
+            "Self: {} at ({}, {})",
+            self.self_player.name,
+            self.self_player.pos.x,
+            self.self_player.pos.y
+        );
+
         for (i, player) in self.other_players.iter().enumerate() {
-            log::info!("Other[{}]: {} at ({}, {})", i, player.name, player.pos.x, player.pos.y);
+            log::info!(
+                "Other[{}]: {} at ({}, {})",
+                i,
+                player.name,
+                player.pos.x,
+                player.pos.y
+            );
         }
         log::info!("----------------------");
     }
@@ -454,7 +462,7 @@ impl Players {
             self.self_player.set_chat_message(message);
             return;
         }
-        
+
         // Otherwise, find the player in other_players
         for player in &mut self.other_players {
             if player.name == username {

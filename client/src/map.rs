@@ -1,7 +1,7 @@
 use crate::assets::AssetManager;
 use ggez::{Context, GameResult, graphics};
 use protocol::Facing;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -79,34 +79,37 @@ impl Map {
     pub fn new() -> Self {
         // Try to load the large room map first
         let large_room_path = "client/assets/large_room_map.json";
-        
+
         if Path::new(large_room_path).exists() {
             match Self::from_json(large_room_path) {
                 Ok(map) => {
                     println!("Loaded large room map from {}", large_room_path);
                     return map;
-                },
+                }
                 Err(e) => {
-                    println!("Failed to load large room map from {}: {}", large_room_path, e);
+                    println!(
+                        "Failed to load large room map from {}: {}",
+                        large_room_path, e
+                    );
                 }
             }
         }
-        
+
         // Try to load the default map from JSON
         let default_path = "client/assets/default_map.json";
-        
+
         if Path::new(default_path).exists() {
             match Self::from_json(default_path) {
                 Ok(map) => {
                     println!("Loaded default map from {}", default_path);
                     return map;
-                },
+                }
                 Err(e) => {
                     println!("Failed to load default map from {}: {}", default_path, e);
                 }
             }
         }
-        
+
         // Check for custom map
         let custom_path = "client/assets/custom_map.json";
         if Path::new(custom_path).exists() {
@@ -114,18 +117,18 @@ impl Map {
                 Ok(map) => {
                     println!("Loaded custom map from {}", custom_path);
                     return map;
-                },
+                }
                 Err(e) => {
                     println!("Failed to load custom map from {}: {}", custom_path, e);
                 }
             }
         }
-        
+
         // If no map is found, create a simple fallback map
         println!("No map found, creating a simple fallback map");
         Self::create_fallback_map()
     }
-    
+
     // Create a simple fallback map if no default map is found
     fn create_fallback_map() -> Self {
         // Simple room layout - just a box with empty space
@@ -143,17 +146,18 @@ impl Map {
             vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
             vec![2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
         ];
-        
+
         Self::from_layouts(vec![room_layout], vec![])
     }
-    
+
     // Create a map from custom room layouts and door connections
-    pub fn from_layouts(room_layouts: Vec<Vec<Vec<u8>>>, doors: Vec<(usize, usize, usize)>) -> Self {
+    pub fn from_layouts(
+        room_layouts: Vec<Vec<Vec<u8>>>,
+        doors: Vec<(usize, usize, usize)>,
+    ) -> Self {
         // Create rooms from layouts
-        let rooms = room_layouts.into_iter()
-            .map(Room::new)
-            .collect();
-            
+        let rooms = room_layouts.into_iter().map(Room::new).collect();
+
         Self {
             rooms,
             current_room: 0,
@@ -169,7 +173,12 @@ impl Map {
         grid_size: i32,
     ) -> GameResult<()> {
         let room = &self.rooms[self.current_room];
-        log::debug!("Drawing map for room {} with dimensions {}x{}", self.current_room, room.width, room.height);
+        log::debug!(
+            "Drawing map for room {} with dimensions {}x{}",
+            self.current_room,
+            room.width,
+            room.height
+        );
 
         // First draw floor tiles for all cells
         if let Some(floor_asset) = asset_manager.get_asset("floor") {
@@ -195,18 +204,21 @@ impl Map {
                     TileType::Wall => {
                         // Use wall_middle for regular walls
                         if let Some(wall_asset) = asset_manager.get_asset("wall_middle") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         }
                     }
                     TileType::Wall2 => {
                         // Use wall2 for the second wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall2") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [(x as i32 * grid_size)  as f32 , (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -214,11 +226,13 @@ impl Map {
                     TileType::Wall3 => {
                         // Use wall3 for the third wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall3") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -226,11 +240,13 @@ impl Map {
                     TileType::Wall4 => {
                         // Use wall4 for the bottom wall type
                         if let Some(wall_asset) = asset_manager.get_asset("wall4") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -238,11 +254,13 @@ impl Map {
                     TileType::Wall5 => {
                         // Use wall5 for the top left corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall5") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -250,11 +268,13 @@ impl Map {
                     TileType::Wall6 => {
                         // Use wall6 for the top right corner
                         if let Some(wall_asset) = asset_manager.get_asset("wall6") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&wall_asset.img, graphics::DrawParam::default().dest(dest));
                         } else if let Some(default_wall) = asset_manager.get_asset("wall_middle") {
                             // Fallback to default wall if specific asset not found
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas
                                 .draw(&default_wall.img, graphics::DrawParam::default().dest(dest));
                         }
@@ -262,7 +282,8 @@ impl Map {
                     TileType::Door => {
                         // Draw the door
                         if let Some(door_asset) = asset_manager.get_asset("door") {
-                            let dest = [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
+                            let dest =
+                                [(x as i32 * grid_size) as f32, (y as i32 * grid_size) as f32];
                             canvas.draw(&door_asset.img, graphics::DrawParam::default().dest(dest));
                         }
                     }
@@ -276,7 +297,10 @@ impl Map {
             match tile_type {
                 TileType::Skull => {
                     if let Some(skull_asset) = asset_manager.get_asset("skull") {
-                        let dest = [(*x as i32 * grid_size) as f32, (*y as i32 * grid_size) as f32];
+                        let dest = [
+                            (*x as i32 * grid_size) as f32,
+                            (*y as i32 * grid_size) as f32,
+                        ];
                         canvas.draw(&skull_asset.img, graphics::DrawParam::default().dest(dest));
                     }
                 }
@@ -345,22 +369,26 @@ impl Map {
                 // Transition to the destination room
                 let prev_room = self.current_room;
                 let new_room = *dest_room;
-                
-                log::info!("Door transition from room {} to room {}", prev_room, new_room);
-                
+
+                log::info!(
+                    "Door transition from room {} to room {}",
+                    prev_room,
+                    new_room
+                );
+
                 // Find the corresponding door in the destination room
                 for (other_door_x, other_door_y, other_dest_room) in &self.doors {
                     if *other_dest_room == prev_room && new_room == self.current_room {
                         // Determine the direction to offset the player from the door
                         // This prevents the player from immediately triggering the door again
                         use protocol::Facing::*;
-                        
+
                         // Calculate the position of the door relative to the room boundaries
                         let is_top_edge = *other_door_y <= 1;
                         let is_bottom_edge = *other_door_y >= self.rooms[new_room].height - 2;
                         let is_left_edge = *other_door_x <= 1;
                         let is_right_edge = *other_door_x >= self.rooms[new_room].width - 2;
-                        
+
                         let direction = if is_top_edge {
                             // Door is at the top of the room, move player down
                             South
@@ -377,15 +405,20 @@ impl Map {
                             // Default direction if door position is ambiguous
                             South
                         };
-                        
-                        log::info!("Found matching door at ({}, {}) in room {}, moving player {:?}", 
-                                  other_door_x, other_door_y, new_room, direction);
+
+                        log::info!(
+                            "Found matching door at ({}, {}) in room {}, moving player {:?}",
+                            other_door_x,
+                            other_door_y,
+                            new_room,
+                            direction
+                        );
 
                         // Return the new room, door position, and direction to offset
                         return Some((new_room, *other_door_x, *other_door_y, direction));
                     }
                 }
-                
+
                 // If we didn't find a matching door, just place the player at a safe position in the new room
                 log::warn!("No matching door found in destination room, using default position");
                 let safe_x = self.rooms[new_room].width / 2;
@@ -401,13 +434,13 @@ impl Map {
     pub fn to_json(&self, path: &str) -> Result<(), String> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| format!("Failed to serialize map to JSON: {}", e))?;
-        
-        let mut file = File::create(path)
-            .map_err(|e| format!("Failed to create file {}: {}", path, e))?;
-        
+
+        let mut file =
+            File::create(path).map_err(|e| format!("Failed to create file {}: {}", path, e))?;
+
         file.write_all(json.as_bytes())
             .map_err(|e| format!("Failed to write to file {}: {}", path, e))?;
-        
+
         println!("Map saved to {}", path);
         Ok(())
     }
@@ -416,10 +449,10 @@ impl Map {
     pub fn from_json(path: &str) -> Result<Self, String> {
         let file = std::fs::read_to_string(path)
             .map_err(|e| format!("Failed to read file {}: {}", path, e))?;
-        
+
         let map: Map = serde_json::from_str(&file)
             .map_err(|e| format!("Failed to deserialize map from JSON: {}", e))?;
-        
+
         println!("Map loaded from {}", path);
         Ok(map)
     }

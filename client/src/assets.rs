@@ -25,12 +25,17 @@ impl AssetManager {
 
     pub fn load_asset(&mut self, ctx: &mut Context, name: &str, path: &str) -> GameResult<()> {
         log::debug!("Loading asset '{}' from path '{}'", name, path);
-        
+
         let img = match Image::from_path(ctx, path) {
             Ok(img) => {
-                log::debug!("Successfully loaded image for '{}', dimensions: {}x{}", name, img.width(), img.height());
+                log::debug!(
+                    "Successfully loaded image for '{}', dimensions: {}x{}",
+                    name,
+                    img.width(),
+                    img.height()
+                );
                 img
-            },
+            }
             Err(e) => {
                 // Try alternative path if the first one fails
                 let alt_path = if path.starts_with("/") {
@@ -41,17 +46,27 @@ impl AssetManager {
 
                 log::warn!(
                     "Failed to load asset from {}: {}. Trying {}",
-                    path, e, alt_path
+                    path,
+                    e,
+                    alt_path
                 );
-                
+
                 match Image::from_path(ctx, alt_path) {
                     Ok(img) => {
-                        log::debug!("Successfully loaded image from alternative path for '{}', dimensions: {}x{}", 
-                                   name, img.width(), img.height());
+                        log::debug!(
+                            "Successfully loaded image from alternative path for '{}', dimensions: {}x{}",
+                            name,
+                            img.width(),
+                            img.height()
+                        );
                         img
-                    },
+                    }
                     Err(e) => {
-                        log::error!("Failed to load asset from alternative path {}: {}", alt_path, e);
+                        log::error!(
+                            "Failed to load asset from alternative path {}: {}",
+                            alt_path,
+                            e
+                        );
                         return Err(e);
                     }
                 }
