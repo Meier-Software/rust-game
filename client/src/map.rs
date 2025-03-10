@@ -75,6 +75,12 @@ impl Room {
     }
 }
 
+impl Default for Map {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Map {
     pub fn new() -> Self {
         // Try to load the large room map first

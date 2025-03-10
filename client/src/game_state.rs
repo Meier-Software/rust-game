@@ -551,28 +551,26 @@ impl GameState {
         self.handle_login_input(ctx);
 
         // Check for Enter key to submit login/registration
-        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
-            if !self.username.is_empty() && !self.password.is_empty() {
-                match self.auth_action {
-                    AuthAction::Login => {
-                        log::info!(
-                            "Sending login for '{}' with password '{}'",
-                            self.username,
-                            self.password
-                        );
-                        let login_msg = format!("login {} {}\r\n", self.username, self.password);
-                        let _ = self.nc.send_str(login_msg);
-                    }
-                    AuthAction::Register => {
-                        log::info!(
-                            "Sending registration for '{}' with password '{}'",
-                            self.username,
-                            self.password
-                        );
-                        let register_msg =
-                            format!("register {} {}\r\n", self.username, self.password);
-                        let _ = self.nc.send_str(register_msg);
-                    }
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) && !self.username.is_empty() && !self.password.is_empty() {
+            match self.auth_action {
+                AuthAction::Login => {
+                    log::info!(
+                        "Sending login for '{}' with password '{}'",
+                        self.username,
+                        self.password
+                    );
+                    let login_msg = format!("login {} {}\r\n", self.username, self.password);
+                    let _ = self.nc.send_str(login_msg);
+                }
+                AuthAction::Register => {
+                    log::info!(
+                        "Sending registration for '{}' with password '{}'",
+                        self.username,
+                        self.password
+                    );
+                    let register_msg =
+                        format!("register {} {}\r\n", self.username, self.password);
+                    let _ = self.nc.send_str(register_msg);
                 }
             }
         }
@@ -626,15 +624,11 @@ impl GameState {
         }
 
         // Handle action type switching with arrow keys when ActionType is focused
-        if matches!(self.input_focus, InputField::ActionType) {
-            if ctx.keyboard.is_key_just_pressed(KeyCode::Left)
-                || ctx.keyboard.is_key_just_pressed(KeyCode::Right)
-            {
-                self.auth_action = match self.auth_action {
-                    AuthAction::Login => AuthAction::Register,
-                    AuthAction::Register => AuthAction::Login,
-                };
-            }
+        if matches!(self.input_focus, InputField::ActionType) && (ctx.keyboard.is_key_just_pressed(KeyCode::Left) || ctx.keyboard.is_key_just_pressed(KeyCode::Right)) {
+            self.auth_action = match self.auth_action {
+                AuthAction::Login => AuthAction::Register,
+                AuthAction::Register => AuthAction::Login,
+            };
         }
 
         // Get the currently focused field if it's a text field

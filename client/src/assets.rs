@@ -16,6 +16,12 @@ pub struct AssetManager {
     assets: HashMap<String, Asset>,
 }
 
+impl Default for AssetManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AssetManager {
     pub fn new() -> Self {
         Self {

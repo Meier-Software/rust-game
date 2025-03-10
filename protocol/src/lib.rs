@@ -50,13 +50,13 @@ pub enum ClientToServer {
 impl ClientToServer {
     pub fn as_line(&self) -> String {
         use ClientToServer::*;
-        let line = match self {
+        
+        match self {
             AttemptPlayerMove(position) => format!("pos {} {}\r\n", position.x, position.y),
             AttemptPlayerFacingChange(facing) => format!("face {}\r\n", facing),
             Register(username, password) => format!("register {} {}\r\n", username, password),
             Login(username, password) => format!("login {} {}\r\n", username, password),
             ChatMessage(message) => format!("chat {}\r\n", message),
-        };
-        line
+        }
     }
 }

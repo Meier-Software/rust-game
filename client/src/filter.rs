@@ -2,6 +2,12 @@
 pub struct Filters {
     filters: Vec<String>,
 }
+impl Default for Filters {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Filters {
     pub fn new() -> Self {
         Self { filters: vec![] }

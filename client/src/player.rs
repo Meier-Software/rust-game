@@ -116,7 +116,7 @@ impl Player {
         }
 
         // Update chat message timer
-        if let Some(_) = &self.chat_message {
+        if self.chat_message.is_some() {
             self.chat_timer -= delta_time;
             if self.chat_timer <= 0.0 {
                 self.chat_message = None;
