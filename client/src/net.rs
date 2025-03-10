@@ -120,6 +120,9 @@ impl NetClient {
         use NCError::*;
         match self.tcp.as_mut() {
             Some(stream) => {
+                // Set non-blocking mode
+                stream.set_nonblocking(true).unwrap();
+                
                 match stream.read(&mut buffer) {
                     Ok(0) => Err(ConnectionError("Server closed connection".to_string())),
                     Ok(n) => {
@@ -132,5 +135,87 @@ impl NetClient {
             }
             None => Err(ConnectionError("Server connection lost".to_string())),
         }
+    }
+
+    pub fn parse_server_message(&self, message: &str) -> Option<protocol::ServerToClient> {
+        if message.contains("player_moved") {
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            
+            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
+            if let Some(username_part) = username_part {
+                let username = username_part
+                    .trim_start_matches("USR-(")
+                    .trim_end_matches("):")
+                    .to_string();
+                
+                if parts.len() >= 4 {
+                    let pos_index = parts.iter().position(|&part| part == "player_moved").unwrap();
+                    if pos_index + 3 < parts.len() {
+                        if let (Ok(x), Ok(y)) = (parts[pos_index + 1].parse::<i32>(), parts[pos_index + 2].parse::<i32>()) {
+                            let facing_str = parts[pos_index + 3];
+                            let facing = match facing_str {
+                                "North" => protocol::Facing::North,
+                                "East" => protocol::Facing::East,
+                                "South" => protocol::Facing::South,
+                                "West" => protocol::Facing::West,
+                                _ => protocol::Facing::South,
+                            };
+                            
+                            return Some(protocol::ServerToClient::PlayerMoved(
+                                username,
+                                protocol::Position::new(x, y),
+                                facing,
+                            ));
+                        }
+                    }
+                }
+            }
+        } else if message.contains("player_joined") {
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            
+            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
+            if let Some(username_part) = username_part {
+                let username = username_part
+                    .trim_start_matches("USR-(")
+                    .trim_end_matches("):")
+                    .to_string();
+                
+                if parts.len() >= 4 {
+                    let pos_index = parts.iter().position(|&part| part == "player_joined").unwrap();
+                    if pos_index + 3 < parts.len() {
+                        if let (Ok(x), Ok(y)) = (parts[pos_index + 1].parse::<i32>(), parts[pos_index + 2].parse::<i32>()) {
+                            let facing_str = parts[pos_index + 3];
+                            let facing = match facing_str {
+                                "North" => protocol::Facing::North,
+                                "East" => protocol::Facing::East,
+                                "South" => protocol::Facing::South,
+                                "West" => protocol::Facing::West,
+                                _ => protocol::Facing::South,
+                            };
+                            
+                            return Some(protocol::ServerToClient::PlayerJoined(
+                                username,
+                                protocol::Position::new(x, y),
+                                facing,
+                            ));
+                        }
+                    }
+                }
+            }
+        } else if message.contains("player_left") {
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            
+            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
+            if let Some(username_part) = username_part {
+                let username = username_part
+                    .trim_start_matches("USR-(")
+                    .trim_end_matches("):")
+                    .to_string();
+                
+                return Some(protocol::ServerToClient::PlayerLeft(username));
+            }
+        }
+        
+        None
     }
 }

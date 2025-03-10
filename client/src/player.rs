@@ -302,11 +302,68 @@ impl Players {
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
         self.self_player
             .update(movement, map, grid_size, delta_time);
+            
+        // Also update other players with the same delta time
+        for player in &mut self.other_players {
+            // For other players, we don't apply movement from local input
+            let no_movement = MovementState {
+                is_moving: player.is_moving,
+                direction: player.direction,
+                dx: 0,
+                dy: 0,
+            };
+            player.update(&no_movement, map, grid_size, delta_time);
+        }
     }
 
     // Add a method to switch the character type for the main player
     pub fn switch_character(&mut self) {
         self.self_player.switch_character();
+    }
+    
+    // New methods for multiplayer support
+    
+    // Add a new player or update an existing one
+    pub fn add_or_update_player(&mut self, name: String, pos: Position, facing: Facing) {
+        // Check if player already exists
+        for player in &mut self.other_players {
+            if player.name == name {
+                // Update existing player
+                player.pos = pos;
+                player.direction = facing;
+                player.is_moving = true; // Assume they're moving since we got an update
+                return;
+            }
+        }
+        
+        // Player doesn't exist, add a new one
+        let mut new_player = Player::new(name, pos);
+        new_player.direction = facing;
+        self.other_players.push(new_player);
+        log::info!("Added new player, total players: {}", self.other_players.len() + 1);
+    }
+    
+    // Remove a player by name
+    pub fn remove_player(&mut self, name: &str) {
+        self.other_players.retain(|player| player.name != name);
+        log::info!("Removed player, total players: {}", self.other_players.len() + 1);
+    }
+    
+    // Update a player's position and facing
+    pub fn update_player_position(&mut self, name: &str, pos: Position, facing: Facing) {
+        for player in &mut self.other_players {
+            if player.name == name {
+                player.pos = pos;
+                player.direction = facing;
+                player.is_moving = true; // They're moving since we got an update
+                // Reset the frame timer to animate movement
+                player.frame_timer = 0.0;
+                return;
+            }
+        }
+        
+        // If we didn't find the player, add them
+        self.add_or_update_player(name.to_string(), pos, facing);
     }
 
     pub fn draw(

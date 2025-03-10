@@ -48,6 +48,7 @@ defmodule Client.Authed do
         "Moved x#{inspect(x)} y#{inspect(y)}"
 
       ["face", dir] ->
+        send(player_pid, {:facing, dir, self()})
         "Facing " <> dir
 
       ["update", "server"] ->
