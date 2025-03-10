@@ -329,6 +329,7 @@ impl Players {
         for player in &mut self.other_players {
             if player.name == name {
                 // Update existing player
+                log::info!("Updating existing player: {} at position ({}, {})", name, pos.x, pos.y);
                 player.pos = pos;
                 player.direction = facing;
                 player.is_moving = true; // Assume they're moving since we got an update
@@ -337,22 +338,38 @@ impl Players {
         }
         
         // Player doesn't exist, add a new one
+        log::info!("Adding new player: {} at position ({}, {})", name, pos.x, pos.y);
         let mut new_player = Player::new(name, pos);
         new_player.direction = facing;
         self.other_players.push(new_player);
-        log::info!("Added new player, total players: {}", self.other_players.len() + 1);
+        log::info!("Total players now: {} (including self)", self.other_players.len() + 1);
+        
+        // Debug print all players
+        self.debug_print_players();
     }
     
     // Remove a player by name
     pub fn remove_player(&mut self, name: &str) {
+        log::info!("Removing player: {}", name);
+        let before_count = self.other_players.len();
         self.other_players.retain(|player| player.name != name);
-        log::info!("Removed player, total players: {}", self.other_players.len() + 1);
+        let after_count = self.other_players.len();
+        
+        if before_count != after_count {
+            log::info!("Player {} removed. Total players now: {} (including self)", name, after_count + 1);
+        } else {
+            log::warn!("Player {} not found for removal", name);
+        }
+        
+        // Debug print all players
+        self.debug_print_players();
     }
     
     // Update a player's position and facing
     pub fn update_player_position(&mut self, name: &str, pos: Position, facing: Facing) {
         for player in &mut self.other_players {
             if player.name == name {
+                log::info!("Updating player position: {} to ({}, {})", name, pos.x, pos.y);
                 player.pos = pos;
                 player.direction = facing;
                 player.is_moving = true; // They're moving since we got an update
@@ -363,7 +380,19 @@ impl Players {
         }
         
         // If we didn't find the player, add them
+        log::info!("Player {} not found for position update, adding new player", name);
         self.add_or_update_player(name.to_string(), pos, facing);
+    }
+    
+    // Debug method to print all players
+    pub fn debug_print_players(&self) {
+        log::info!("--- Current Players ---");
+        log::info!("Self: {} at ({}, {})", self.self_player.name, self.self_player.pos.x, self.self_player.pos.y);
+        
+        for (i, player) in self.other_players.iter().enumerate() {
+            log::info!("Other[{}]: {} at ({}, {})", i, player.name, player.pos.x, player.pos.y);
+        }
+        log::info!("----------------------");
     }
 
     pub fn draw(
@@ -375,7 +404,9 @@ impl Players {
         self.self_player.draw(canvas, asset_manager)?;
 
         // Draw other players
+        log::info!("Drawing {} other players", self.other_players.len());
         for player in &self.other_players {
+            log::info!("Drawing player: {} at ({}, {})", player.name, player.pos.x, player.pos.y);
             player.draw(canvas, asset_manager)?;
         }
 

@@ -495,6 +495,8 @@ impl GameState {
         let mut message_count = 0;
         let max_messages_per_frame = 10; // Limit to prevent infinite loops
         
+        log::info!("Starting to process network messages");
+        
         loop {
             // Try to receive a message from the server
             match self.nc.recv() {
@@ -518,9 +520,11 @@ impl GameState {
                                 self.players.update_player_position(&username, position, facing);
                             },
                             _ => {
-                                // Handle other message types if needed
+                                log::info!("Received other message type: {:?}", server_message);
                             }
                         }
+                    } else {
+                        log::warn!("Could not parse server message: {}", message);
                     }
                     
                     // Break if we've processed too many messages to prevent infinite loops
@@ -542,6 +546,8 @@ impl GameState {
         
         if message_count > 0 {
             log::info!("Processed {} network messages this frame", message_count);
+            // Debug print all players after processing messages
+            self.players.debug_print_players();
         }
     }
 

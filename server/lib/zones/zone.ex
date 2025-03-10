@@ -33,12 +33,17 @@ defmodule Zone do
       {:player_moved, username, x, y, facing} ->
         Logger.info("Player #{username} moved to (#{x}, #{y}) facing #{facing}")
         player_list = Map.get(zone_data, :playerlist)
+        Logger.info("Current player list: #{inspect(player_list)}")
         
         # Broadcast to all players except the one who moved
+        broadcast_count = 0
         for {k, player_pid} <- player_list, k != username do
+          Logger.info("Broadcasting movement to player #{k}")
           send(player_pid, {:client_send, "player_moved #{username} #{x} #{y} #{facing}"})
+          broadcast_count = broadcast_count + 1
         end
         
+        Logger.info("Movement broadcast to #{broadcast_count} players")
         loop_zone(zone_data)
 
       {:broadcast, line} ->
@@ -55,12 +60,17 @@ defmodule Zone do
       {:broadcast_player_joined, username, x, y, facing} ->
         Logger.info("Broadcasting player joined: #{username} at (#{x}, #{y}) facing #{facing}")
         player_list = Map.get(zone_data, :playerlist)
+        Logger.info("Current player list: #{inspect(player_list)}")
         
         # Broadcast to all players except the one who joined
+        broadcast_count = 0
         for {k, player_pid} <- player_list, k != username do
+          Logger.info("Broadcasting join to player #{k}")
           send(player_pid, {:client_send, "player_joined #{username} #{x} #{y} #{facing}"})
+          broadcast_count = broadcast_count + 1
         end
         
+        Logger.info("Join broadcast to #{broadcast_count} players")
         loop_zone(zone_data)
     after
       0 ->
