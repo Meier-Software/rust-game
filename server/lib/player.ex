@@ -3,6 +3,8 @@ defmodule Player do
 
   @moduledoc """
   A player process should be in charge of its own data and should regularly save this state to the db.
+
+  TODO: Kill player when client leaves or logs out.
   """
 
   def start(client_pid, username) do

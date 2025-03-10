@@ -38,6 +38,7 @@ pub enum ClientToServer {
     AttemptPlayerFacingChange(Facing),
 
     Register(String, String),
+    Login(String, String)
 }
 
 impl ClientToServer {
@@ -47,6 +48,7 @@ impl ClientToServer {
             AttemptPlayerMove(position) => format!("move {} {}\r\n", position.x, position.y),
             AttemptPlayerFacingChange(facing) => format!("face {}\r\n", facing),
             Register(username, password) => format!("register {} {}\r\n", username, password),
+            Login(username, password) => format!("login {} {}\r\n", username, password),
         };
         line
     }
