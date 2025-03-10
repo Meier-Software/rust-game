@@ -203,6 +203,9 @@ impl Player {
             // Use a smaller scale factor to make the sprite half the size
             let scale_factor = 0.75;
             
+            // Calculate the scaled width for potential use in flipping and positioning
+            let scaled_width = hero_asset.img.width() as f32 * scale_factor;
+            
             // Draw the hero sprite at the correct position
             let mut draw_params = graphics::DrawParam::default()
                 .dest([self.pos.x as f32, self.pos.y as f32]);
@@ -210,15 +213,28 @@ impl Player {
             // Apply scaling
             if flip_x {
                 // For flipped sprites, we need to adjust the destination point
-                // First calculate the width of the scaled sprite
-                let scaled_width = hero_asset.img.width() as f32 * scale_factor;
-                
                 // Set the destination to account for the flipped sprite
                 draw_params = draw_params
                     .dest([self.pos.x as f32 + scaled_width, self.pos.y as f32])
                     .scale([scale_factor * -1.0, scale_factor]);
             } else {
                 draw_params = draw_params.scale([scale_factor, scale_factor]);
+            }
+
+            // Special handling for Archer character - adjust position if needed
+            if character == "Archer" {
+                // Only adjust the Y position for Archer to center it vertically
+                let y_offset = 4.0;  // Adjust y position for Archer
+                
+                // Get the current x position (which already accounts for flipping if needed)
+                let x_pos = if flip_x {
+                    self.pos.x as f32 + scaled_width
+                } else {
+                    self.pos.x as f32
+                };
+                
+                // Apply the y offset while preserving the x position
+                draw_params = draw_params.dest([x_pos, self.pos.y as f32 - y_offset]);
             }
 
             canvas.draw(&hero_asset.img, draw_params);

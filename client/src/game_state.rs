@@ -178,11 +178,31 @@ impl GameState {
         );
         log::info!("Loading idle down animation from: {}", idle_down_path);
         
-        asset_manager.load_asset(
+        // Special handling for Archer to ensure assets are loaded correctly
+        let load_result = asset_manager.load_asset(
             ctx,
             &format!("{}_idle_down", character),
             &idle_down_path,
-        )?;
+        );
+        
+        // If loading fails for Archer, try an alternative path
+        if let Err(e) = load_result {
+            if character == "Archer" {
+                log::warn!("Failed to load Archer idle down animation: {}. Trying alternative path.", e);
+                // Try alternative path with correct casing
+                let alt_path = format!(
+                    "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
+                    character_path
+                );
+                asset_manager.load_asset(
+                    ctx,
+                    &format!("{}_idle_down", character),
+                    &alt_path,
+                )?;
+            } else {
+                return Err(e);
+            }
+        }
 
         let idle_up_path = format!(
             "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
@@ -194,11 +214,31 @@ impl GameState {
         );
         log::info!("Loading idle up animation from: {}", idle_up_path);
         
-        asset_manager.load_asset(
+        // Special handling for Archer to ensure assets are loaded correctly
+        let load_result = asset_manager.load_asset(
             ctx,
             &format!("{}_idle_up", character),
             &idle_up_path,
-        )?;
+        );
+        
+        // If loading fails for Archer, try an alternative path
+        if let Err(e) = load_result {
+            if character == "Archer" {
+                log::warn!("Failed to load Archer idle up animation: {}. Trying alternative path.", e);
+                // Try alternative path with correct casing
+                let alt_path = format!(
+                    "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
+                    character_path
+                );
+                asset_manager.load_asset(
+                    ctx,
+                    &format!("{}_idle_up", character),
+                    &alt_path,
+                )?;
+            } else {
+                return Err(e);
+            }
+        }
 
         let idle_right_path = format!(
             "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
@@ -210,25 +250,67 @@ impl GameState {
         );
         log::info!("Loading idle right animation from: {}", idle_right_path);
         
-        asset_manager.load_asset(
+        // Special handling for Archer to ensure assets are loaded correctly
+        let load_result = asset_manager.load_asset(
             ctx,
             &format!("{}_idle_right", character),
             &idle_right_path,
-        )?;
+        );
+        
+        // If loading fails for Archer, try an alternative path
+        if let Err(e) = load_result {
+            if character == "Archer" {
+                log::warn!("Failed to load Archer idle right animation: {}. Trying alternative path.", e);
+                // Try alternative path with correct casing
+                let alt_path = format!(
+                    "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
+                    character_path
+                );
+                asset_manager.load_asset(
+                    ctx,
+                    &format!("{}_idle_right", character),
+                    &alt_path,
+                )?;
+            } else {
+                return Err(e);
+            }
+        }
 
         // Add left-facing idle animation (using the same sprite as right for now)
-        asset_manager.load_asset(
+        let idle_left_path = format!(
+            "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
+            character_path,
+            character.to_lowercase(),
+            gender.to_lowercase(),
+            character.to_lowercase(),
+            gender.to_lowercase()
+        );
+        
+        // Special handling for Archer to ensure assets are loaded correctly
+        let load_result = asset_manager.load_asset(
             ctx,
             &format!("{}_idle_left", character),
-            &format!(
-                "{}/{}_{}_idle_anim/{}_{}_idle_anim_f1.png",
-                character_path,
-                character.to_lowercase(),
-                gender.to_lowercase(),
-                character.to_lowercase(),
-                gender.to_lowercase()
-            ),
-        )?;
+            &idle_left_path,
+        );
+        
+        // If loading fails for Archer, try an alternative path
+        if let Err(e) = load_result {
+            if character == "Archer" {
+                log::warn!("Failed to load Archer idle left animation: {}. Trying alternative path.", e);
+                // Try alternative path with correct casing
+                let alt_path = format!(
+                    "{}/archer_m_idle_anim/archer_m_idle_anim_f1.png",
+                    character_path
+                );
+                asset_manager.load_asset(
+                    ctx,
+                    &format!("{}_idle_left", character),
+                    &alt_path,
+                )?;
+            } else {
+                return Err(e);
+            }
+        }
 
         // Load idle animation frames - use idle animations for all characters
         // since not all characters have sleep animations
@@ -243,78 +325,217 @@ impl GameState {
                 i
             );
 
-            asset_manager.load_asset(ctx, &format!("{}_idle_{}", character, i), &anim_path)?;
+            // Special handling for Archer to ensure assets are loaded correctly
+            let load_result = asset_manager.load_asset(
+                ctx, 
+                &format!("{}_idle_{}", character, i), 
+                &anim_path
+            );
+            
+            // If loading fails for Archer, try an alternative path
+            if let Err(e) = load_result {
+                if character == "Archer" {
+                    log::warn!("Failed to load Archer idle animation frame {}: {}. Trying alternative path.", i, e);
+                    // Try alternative path with correct casing
+                    let alt_path = format!(
+                        "{}/archer_m_idle_anim/archer_m_idle_anim_f{}.png",
+                        character_path,
+                        i
+                    );
+                    asset_manager.load_asset(
+                        ctx,
+                        &format!("{}_idle_{}", character, i),
+                        &alt_path,
+                    )?;
+                } else {
+                    return Err(e);
+                }
+            }
         }
 
         // Load run animations
         for i in 1..=4 {
             // Down direction
-            asset_manager.load_asset(
+            let run_down_path = format!(
+                "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                i
+            );
+            
+            // Special handling for Archer to ensure assets are loaded correctly
+            let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_down_{}", character, i),
-                &format!(
-                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
-                    character_path,
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    i
-                ),
-            )?;
+                &run_down_path,
+            );
+            
+            // If loading fails for Archer, try an alternative path
+            if let Err(e) = load_result {
+                if character == "Archer" {
+                    log::warn!("Failed to load Archer run down animation frame {}: {}. Trying alternative path.", i, e);
+                    // Try alternative path with correct casing
+                    let alt_path = format!(
+                        "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
+                        character_path,
+                        i
+                    );
+                    asset_manager.load_asset(
+                        ctx,
+                        &format!("{}_run_down_{}", character, i),
+                        &alt_path,
+                    )?;
+                } else {
+                    return Err(e);
+                }
+            }
 
             // Up direction
-            asset_manager.load_asset(
+            let run_up_path = format!(
+                "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                i
+            );
+            
+            // Special handling for Archer to ensure assets are loaded correctly
+            let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_up_{}", character, i),
-                &format!(
-                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
-                    character_path,
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    i
-                ),
-            )?;
+                &run_up_path,
+            );
+            
+            // If loading fails for Archer, try an alternative path
+            if let Err(e) = load_result {
+                if character == "Archer" {
+                    log::warn!("Failed to load Archer run up animation frame {}: {}. Trying alternative path.", i, e);
+                    // Try alternative path with correct casing
+                    let alt_path = format!(
+                        "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
+                        character_path,
+                        i
+                    );
+                    asset_manager.load_asset(
+                        ctx,
+                        &format!("{}_run_up_{}", character, i),
+                        &alt_path,
+                    )?;
+                } else {
+                    return Err(e);
+                }
+            }
 
             // Right direction
-            asset_manager.load_asset(
+            let run_right_path = format!(
+                "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                i
+            );
+            
+            // Special handling for Archer to ensure assets are loaded correctly
+            let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_right_{}", character, i),
-                &format!(
-                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
-                    character_path,
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    i
-                ),
-            )?;
+                &run_right_path,
+            );
+            
+            // If loading fails for Archer, try an alternative path
+            if let Err(e) = load_result {
+                if character == "Archer" {
+                    log::warn!("Failed to load Archer run right animation frame {}: {}. Trying alternative path.", i, e);
+                    // Try alternative path with correct casing
+                    let alt_path = format!(
+                        "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
+                        character_path,
+                        i
+                    );
+                    asset_manager.load_asset(
+                        ctx,
+                        &format!("{}_run_right_{}", character, i),
+                        &alt_path,
+                    )?;
+                } else {
+                    return Err(e);
+                }
+            }
             
             // Left direction (using the same sprite as right for now)
-            asset_manager.load_asset(
+            let run_left_path = format!(
+                "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
+                character_path,
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                character.to_lowercase(),
+                gender.to_lowercase(),
+                i
+            );
+            
+            // Special handling for Archer to ensure assets are loaded correctly
+            let load_result = asset_manager.load_asset(
                 ctx,
                 &format!("{}_run_left_{}", character, i),
-                &format!(
-                    "{}/{}_{}_run_anim/{}_{}_run_anim_f{}.png",
-                    character_path,
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    character.to_lowercase(),
-                    gender.to_lowercase(),
-                    i
-                ),
-            )?;
+                &run_left_path,
+            );
+            
+            // If loading fails for Archer, try an alternative path
+            if let Err(e) = load_result {
+                if character == "Archer" {
+                    log::warn!("Failed to load Archer run left animation frame {}: {}. Trying alternative path.", i, e);
+                    // Try alternative path with correct casing
+                    let alt_path = format!(
+                        "{}/archer_m_run_anim/archer_m_run_anim_f{}.png",
+                        character_path,
+                        i
+                    );
+                    asset_manager.load_asset(
+                        ctx,
+                        &format!("{}_run_left_{}", character, i),
+                        &alt_path,
+                    )?;
+                } else {
+                    return Err(e);
+                }
+            }
         }
 
         // Load fallback asset
-        asset_manager.load_asset(
+        let fallback_path = format!("{}/{}_{}.png", character_path, character, gender);
+        
+        // Special handling for Archer to ensure assets are loaded correctly
+        let load_result = asset_manager.load_asset(
             ctx,
             character,
-            &format!("{}/{}_{}.png", character_path, character, gender),
-        )?;
+            &fallback_path,
+        );
+        
+        // If loading fails for Archer, try an alternative path
+        if let Err(e) = load_result {
+            if character == "Archer" {
+                log::warn!("Failed to load Archer fallback asset: {}. Trying alternative path.", e);
+                // Try alternative path with correct casing
+                let alt_path = format!(
+                    "{}/Archer_M.png",
+                    character_path
+                );
+                asset_manager.load_asset(
+                    ctx,
+                    character,
+                    &alt_path,
+                )?;
+            } else {
+                return Err(e);
+            }
+        }
 
         Ok(())
     }
