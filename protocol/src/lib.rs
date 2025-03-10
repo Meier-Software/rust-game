@@ -28,6 +28,7 @@ impl std::fmt::Display for Facing {
     }
 }
 
+#[derive(Debug)]
 pub enum ServerToClient {
     EntityMoved(Position),
     PlayerJoined(String, Position, Facing),

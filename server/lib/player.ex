@@ -8,7 +8,7 @@ defmodule Player do
   """
 
   def start(client_pid, username) do
-    Logger.info("New player-(#{username}) spawned for client-(#{inspect(client_pid)})")
+    Logger.info("Player joined: #{username}")
 
     stats = %{:hp => 10, :mp => 20}
 
@@ -27,7 +27,6 @@ defmodule Player do
     receive do
       {:heal, value, pid} ->
         {:ok, username} = Map.fetch(info, :username)
-        Logger.info("Player #{inspect(username)} healed.")
 
         {value, _} = Integer.parse(value)
         {:ok, hp} = Map.fetch(stats, :hp)
@@ -38,6 +37,16 @@ defmodule Player do
 
       {:stats, pid} ->
         send(pid, {:stats, stats, info})
+        loop_player(client_pid, stats, info)
+
+      {:get_position, pid} ->
+        # Get current position and facing
+        {:ok, x} = Map.fetch(info, :x)
+        {:ok, y} = Map.fetch(info, :y)
+        {:ok, facing} = Map.fetch(info, :facing)
+        
+        # Send position info back to the requester
+        send(pid, {:position_info, x, y, facing})
         loop_player(client_pid, stats, info)
 
       {:facing, dir, pid} ->
@@ -55,17 +64,21 @@ defmodule Player do
         send(:zone_manager, {:player_moved, username, x, y, dir})
 
         loop_player(client_pid, stats, info)
+        
+      {:set_username, username, pid} ->
+        Logger.info("Player joined: #{username}")
+        info = Map.put(info, :username, username)
+        send(pid, {:client_send, "Username set to #{username}"})
+        loop_player(client_pid, stats, info)
 
       {:move, x, y, pid} ->
         send(pid, {:moved, x, y})
         {x_delta, _} = Integer.parse(x)
         {y_delta, _} = Integer.parse(y)
 
-        {:ok, x} = Map.fetch(info, :x)
-        info = Map.put(info, :x, x + x_delta)
-
-        {:ok, y} = Map.fetch(info, :y)
-        info = Map.put(info, :y, y + y_delta)
+        # Update position - treat x and y as absolute positions, not deltas
+        info = Map.put(info, :x, x_delta)
+        info = Map.put(info, :y, y_delta)
         
         # Get the current facing direction
         {:ok, facing} = Map.fetch(info, :facing)
@@ -74,19 +87,17 @@ defmodule Player do
         {:ok, username} = Map.fetch(info, :username)
         
         # Broadcast the movement to all players in the zone
-        send(:zone_manager, {:player_moved, username, x + x_delta, y + y_delta, facing})
+        send(:zone_manager, {:player_moved, username, x_delta, y_delta, facing})
 
         loop_player(client_pid, stats, info)
 
       {:client_send, line} ->
-        Logger.info("Player got client send event.")
         send(client_pid, {:client_send, line})
         loop_player(client_pid, stats, info)
 
       err ->
         {:ok, username} = Map.fetch(info, :username)
-
-        Logger.info("Client Error #{inspect(err)} from #{username}.")
+        Logger.warn("Client Error #{inspect(err)} from #{username}.")
         loop_player(client_pid, stats, info)
 
       _ ->

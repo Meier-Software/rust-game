@@ -1,5 +1,6 @@
 use ggez::{
-    graphics,
+    Context,
+    graphics::{self, Drawable},
     GameResult,
 };
 use protocol::{Facing, Position};
@@ -13,6 +14,8 @@ use crate::{
 const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
 const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
+const ANIMATION_SPEED: f32 = 5.0;
+const IDLE_ANIMATION_SPEED: f32 = 2.0;
 
 // Character types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -79,92 +82,73 @@ impl Player {
     }
 
     pub fn update(&mut self, movement: &MovementState, map: &Map, grid_size: i32, delta_time: f32) {
-        // Store previous state
-        let was_moving = self.is_moving;
-        let previous_direction = self.direction;
-
-        // Update movement state
-        self.is_moving = movement.is_moving;
-        self.direction = movement.direction;
-
-        // Reset idle timer if player starts moving or changes direction
-        if ((was_moving != self.is_moving) && self.is_moving)
-            || (previous_direction != self.direction)
-        {
-            self.idle_timer = 0.0;
-            self.is_in_idle_animation = false;
-            log::trace!("Player moved or changed direction, resetting idle animation state");
+        // Update direction based on movement
+        if movement.is_moving {
+            self.direction = movement.direction;
         }
 
-        // Update animation if moving
+        // Calculate new position based on movement
+        let new_x = self.pos.x + movement.dx;
+        let new_y = self.pos.y + movement.dy;
+
+        // Check if the new position is valid
+        if map.is_valid_position(new_x, new_y, grid_size) {
+            self.pos.x = new_x;
+            self.pos.y = new_y;
+            self.is_moving = movement.is_moving;
+        } else {
+            // If we can't move in both directions, try moving in just one
+            let new_x_only = self.pos.x + movement.dx;
+            let new_y_only = self.pos.y + movement.dy;
+
+            if map.is_valid_position(new_x_only, self.pos.y, grid_size) {
+                self.pos.x = new_x_only;
+                self.is_moving = movement.is_moving;
+            }
+
+            if map.is_valid_position(self.pos.x, new_y_only, grid_size) {
+                self.pos.y = new_y_only;
+                self.is_moving = movement.is_moving;
+            }
+        }
+
+        // Update animation frame
         if self.is_moving {
-            // Update animation frame
-            self.frame_timer += delta_time;
-            if self.frame_timer >= ANIMATION_FRAME_TIME {
+            // Reset idle timer when moving
+            self.idle_timer = 0.0;
+            self.is_in_idle_animation = false;
+
+            // Update frame timer for running animation
+            self.frame_timer += delta_time * ANIMATION_SPEED;
+            if self.frame_timer >= 1.0 {
                 self.frame_timer = 0.0;
-                self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Using MAX_FRAMES constant
+                self.current_frame = (self.current_frame + 1) % MAX_FRAMES;
             }
         } else {
-            // When not moving, increment idle timer
+            // Update idle timer
             self.idle_timer += delta_time;
 
-            // Check if we should switch to idle animation
-            if self.idle_timer >= IDLE_ANIMATION_DELAY && !self.is_in_idle_animation {
+            // Start idle animation after 3 seconds of no movement
+            if self.idle_timer >= 3.0 && !self.is_in_idle_animation {
                 self.is_in_idle_animation = true;
-                self.current_frame = 0; // Reset frame for idle animation
-                self.frame_timer = 0.0;
-                log::info!("Entering idle animation");
-            }
-
-            // If in idle animation, update frames continuously to loop the animation
-            if self.is_in_idle_animation {
-                self.frame_timer += delta_time;
-                if self.frame_timer >= ANIMATION_FRAME_TIME * 3.0 {
-                    // Even slower idle/sleep animation
-                    self.frame_timer = 0.0;
-                    let old_frame = self.current_frame;
-                    self.current_frame = (self.current_frame + 1) % MAX_FRAMES; // Loop through frames
-                    log::trace!(
-                        "Idle animation frame changed: {} -> {}",
-                        old_frame,
-                        self.current_frame
-                    ); // Debug output
-                }
-            } else {
-                // Reset to first frame when not moving and not in idle animation
                 self.current_frame = 0;
                 self.frame_timer = 0.0;
             }
-        }
 
-        // Update position
-        if movement.is_moving {
-            // Calculate new position
-            let new_x = self.pos.x + movement.dx;
-            let new_y = self.pos.y + movement.dy;
-
-            // Calculate the center of the player sprite for collision detection
-            let center_x = new_x + PLAYER_SIZE / 2;
-            let center_y = new_y + PLAYER_SIZE / 2;
-
-            // Check horizontal movement
-            if map.is_valid_position(center_x, self.pos.y + PLAYER_SIZE / 2, grid_size) {
-                self.pos.x = new_x;
+            // Update frame timer for idle animation
+            if self.is_in_idle_animation {
+                self.frame_timer += delta_time * IDLE_ANIMATION_SPEED;
+                if self.frame_timer >= 1.0 {
+                    self.frame_timer = 0.0;
+                    self.current_frame = (self.current_frame + 1) % MAX_FRAMES;
+                }
             }
-
-            // Check vertical movement
-            if map.is_valid_position(self.pos.x + PLAYER_SIZE / 2, center_y, grid_size) {
-                self.pos.y = new_y;
-            }
-
-            // Ensure player stays within world bounds
-            self.pos.x = self.pos.x.clamp(0, WORLD_SIZE - PLAYER_SIZE);
-            self.pos.y = self.pos.y.clamp(0, WORLD_SIZE - PLAYER_SIZE);
         }
     }
 
     pub fn draw(
         &self,
+        ctx: &Context,
         canvas: &mut graphics::Canvas,
         asset_manager: &AssetManager,
     ) -> GameResult<()> {
@@ -198,13 +182,8 @@ impl Player {
             }
         };
 
-        log::info!("Trying to draw player with asset: {}", asset_name);
-
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
-            log::info!("Found hero asset: {} with dimensions {}x{}", 
-                      asset_name, hero_asset.img.width(), hero_asset.img.height());
-            
             // Determine if we need to flip the sprite horizontally for left-facing sprites
             // Since we're using the same sprites for both left and right, we need to flip the left-facing ones
             let flip_x = self.direction == protocol::Facing::West;
@@ -231,16 +210,24 @@ impl Player {
             }
 
             canvas.draw(&hero_asset.img, draw_params);
-            log::info!("Drew player sprite at ({}, {})", self.pos.x, self.pos.y);
+            
+            // Draw player name above the sprite
+            let name_text = graphics::Text::new(&self.name);
+            let name_width = name_text.dimensions(ctx).unwrap().w;
+            canvas.draw(
+                &name_text,
+                graphics::DrawParam::default()
+                    .dest([
+                        self.pos.x as f32 + (hero_asset.img.width() as f32 * scale_factor / 2.0) - (name_width / 2.0),
+                        self.pos.y as f32 - 20.0
+                    ])
+                    .color(graphics::Color::WHITE),
+            );
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
-            log::info!("Asset {} not found, trying fallback: {}", asset_name, fallback_asset);
             
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
-                log::info!("Found fallback asset: {} with dimensions {}x{}", 
-                          fallback_asset, player_asset.img.width(), player_asset.img.height());
-                
                 // Use a smaller scale factor for the fallback sprite as well
                 let scale_factor = 0.75;
                 
@@ -249,10 +236,7 @@ impl Player {
                     .scale([scale_factor, scale_factor]);
                     
                 canvas.draw(&player_asset.img, draw_params);
-                log::info!("Drew fallback player sprite at ({}, {})", self.pos.x, self.pos.y);
             } else {
-                log::warn!("Could not find asset for player: {} or fallback: {}", asset_name, fallback_asset);
-                
                 // Draw a colored rectangle as a fallback to make the player visible
                 let color = match self.character_type {
                     CharacterType::Knight => graphics::Color::RED,
@@ -272,8 +256,6 @@ impl Player {
                         .scale([rect_size, rect_size])
                         .color(color)
                 );
-                
-                log::info!("Drew colored rectangle for player at ({}, {})", self.pos.x, self.pos.y);
             }
         }
 
@@ -282,7 +264,6 @@ impl Player {
 
     pub fn switch_character(&mut self) {
         self.character_type = self.character_type.next();
-        log::info!("Switched to character: {:?}", self.character_type);
     }
 }
 
@@ -340,13 +321,11 @@ impl Players {
         let mut new_player = Player::new(name, pos);
         new_player.direction = facing;
         self.other_players.push(new_player);
-        log::info!("Added new player, total players: {}", self.other_players.len() + 1);
     }
     
     // Remove a player by name
     pub fn remove_player(&mut self, name: &str) {
         self.other_players.retain(|player| player.name != name);
-        log::info!("Removed player, total players: {}", self.other_players.len() + 1);
     }
     
     // Update a player's position and facing
@@ -365,18 +344,30 @@ impl Players {
         // If we didn't find the player, add them
         self.add_or_update_player(name.to_string(), pos, facing);
     }
+    
+    // Debug method to print all players
+    pub fn debug_print_players(&self) {
+        log::info!("--- Current Players ---");
+        log::info!("Self: {} at ({}, {})", self.self_player.name, self.self_player.pos.x, self.self_player.pos.y);
+        
+        for (i, player) in self.other_players.iter().enumerate() {
+            log::info!("Other[{}]: {} at ({}, {})", i, player.name, player.pos.x, player.pos.y);
+        }
+        log::info!("----------------------");
+    }
 
     pub fn draw(
         &self,
+        ctx: &Context,
         canvas: &mut graphics::Canvas,
         asset_manager: &AssetManager,
     ) -> GameResult<()> {
         // Draw the main player
-        self.self_player.draw(canvas, asset_manager)?;
+        self.self_player.draw(ctx, canvas, asset_manager)?;
 
         // Draw other players
         for player in &self.other_players {
-            player.draw(canvas, asset_manager)?;
+            player.draw(ctx, canvas, asset_manager)?;
         }
 
         Ok(())

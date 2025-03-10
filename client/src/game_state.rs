@@ -323,8 +323,8 @@ impl GameState {
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             if !self.username.is_empty() && !self.password.is_empty() {
                 log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
-                let event = ClientToServer::Register(self.username.clone(), self.password.clone());
-                let _ = self.nc.send(event);
+                let register_msg = format!("register {} {}\r\n", self.username, self.password);
+                let _ = self.nc.send_str(register_msg);
             }
         }
         
@@ -337,12 +337,33 @@ impl GameState {
                 // Check if login was successful and transition to InGame
                 if ok.contains("Logged in") || ok.contains("Registered user") {
                     log::info!("Authentication successful, entering game.");
+                    
+                    // Set the player's name to the username used for login
+                    self.players.self_player.name = self.username.clone();
+                    log::info!("Set player name to: {}", self.username);
+                    
+                    // Send the username to the server for identification
+                    let username_msg = format!("username {}\r\n", self.username);
+                    let _ = self.nc.send_str(username_msg);
+                    
+                    // Transition to InGame stage
                     self.stage = Stage::InGame;
                 }
             }
             Err(err) => match err {
                 NoNewData => {
-                    // Auto-login for testing purposes is now disabled since we have manual input
+                    // Auto-login for testing purposes
+                    // This will automatically try to login after a short delay
+                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
+                    unsafe {
+                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
+                        if AUTO_LOGIN_TIMER > 2.0 {
+                            AUTO_LOGIN_TIMER = 0.0;
+                            log::info!("Auto-login: Sending login command");
+                            let register_msg = format!("register test_user password\r\n");
+                            let _ = self.nc.send_str(register_msg);
+                        }
+                    }
                 }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
@@ -441,7 +462,7 @@ impl GameState {
         let key_press = input::handle_key_press(ctx);
 
         // Send movement to server
-        input::send_movement_to_server(&mut self.nc, &movement);
+        input::send_movement_to_server(&mut self.nc, &movement, &self.username);
 
         // Update player position
         let delta_time = ctx.time.delta().as_secs_f32();
@@ -477,51 +498,185 @@ impl GameState {
             self.players.self_player.pos.y = new_y;
             self.players.self_player.direction = facing;
             
-            log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
+            log::info!("Self position: ({}, {}) - Room: {}", new_x, new_y, new_room);
+            
+            // Send an extra position update after teleporting
+            self.send_absolute_position();
         }
         
-        // Handle network messages for other players
-        self.process_network_messages();
+        // Periodically send position updates even when not moving
+        // This ensures other clients know where we are
+        static mut POSITION_UPDATE_TIMER: f32 = 0.0;
+        unsafe {
+            POSITION_UPDATE_TIMER += delta_time;
+            if POSITION_UPDATE_TIMER > 1.0 {  // Send position update every second
+                POSITION_UPDATE_TIMER = 0.0;
+                
+                // Send current position
+                self.send_absolute_position();
+                
+                // Log self position
+                log::info!("Self position: ({}, {}) - Room: {}", 
+                          self.players.self_player.pos.x, 
+                          self.players.self_player.pos.y,
+                          self.map.current_room);
+            }
+        }
+        
+        // Process network messages multiple times per frame to ensure we don't miss any
+        for _ in 0..3 {
+            self.process_network_messages();
+        }
+    }
+    
+    // Helper method to send the player's absolute position to the server
+    fn send_absolute_position(&mut self) {
+        // Send username for identification
+        let username_msg = format!("username {}\r\n", self.username);
+        let _ = self.nc.send_str(username_msg);
+        
+        // Send current facing direction
+        let facing_msg = format!("face {}\r\n", self.players.self_player.direction);
+        let _ = self.nc.send_str(facing_msg);
+        
+        // Send current position
+        let move_msg = format!("move {} {}\r\n", 
+            self.players.self_player.pos.x, 
+            self.players.self_player.pos.y
+        );
+        let _ = self.nc.send_str(move_msg);
     }
 
-    // New method to process network messages for other players
+    // Method to process network messages for other players
     fn process_network_messages(&mut self) {
         // Only process messages if we're not in offline mode
         if self.nc.is_offline() {
             return;
         }
         
-        // Try to receive a message from the server
-        match self.nc.recv() {
-            Ok(message) => {
-                log::info!("Received message from server: {}", message);
-                
-                // Parse the message to see if it's a player update
-                if let Some(server_message) = self.nc.parse_server_message(&message) {
-                    match server_message {
-                        protocol::ServerToClient::PlayerJoined(username, position, facing) => {
-                            log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
-                            self.players.add_or_update_player(username, position, facing);
-                        },
-                        protocol::ServerToClient::PlayerLeft(username) => {
-                            log::info!("Player left: {}", username);
-                            self.players.remove_player(&username);
-                        },
-                        protocol::ServerToClient::PlayerMoved(username, position, facing) => {
-                            log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
-                            self.players.update_player_position(&username, position, facing);
-                        },
-                        _ => {
-                            // Handle other message types if needed
+        // Process all available messages in a loop
+        let mut message_count = 0;
+        let max_messages_per_frame = 10; // Limit to prevent infinite loops
+        
+        loop {
+            // Try to receive a message from the server
+            match self.nc.recv() {
+                Ok(message) => {
+                    message_count += 1;
+                    
+                    // Skip "Invalid protocol" messages
+                    if message.contains("Invalid protocol") {
+                        continue;
+                    }
+                    
+                    // Log raw messages for debugging
+                    log::info!("Raw server message: {}", message);
+                    
+                    // Parse the message to see if it's a player update
+                    if let Some(server_message) = self.nc.parse_server_message(&message) {
+                        match server_message {
+                            protocol::ServerToClient::PlayerJoined(username, position, facing) => {
+                                // Skip if this is our own username
+                                if username == self.username {
+                                    log::info!("Skipping own player joined message: {}", username);
+                                    continue;
+                                }
+                                
+                                log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
+                                self.players.add_or_update_player(username, position, facing);
+                                
+                                // Debug print all players
+                                self.players.debug_print_players();
+                            },
+                            protocol::ServerToClient::PlayerLeft(username) => {
+                                log::info!("Player left: {}", username);
+                                self.players.remove_player(&username);
+                                
+                                // Debug print all players
+                                self.players.debug_print_players();
+                            },
+                            protocol::ServerToClient::PlayerMoved(username, position, facing) => {
+                                // Skip if this is our own username
+                                if username == self.username {
+                                    log::info!("Skipping own player moved message: {}", username);
+                                    continue;
+                                }
+                                
+                                // Only log position updates if the position is not (0,0)
+                                // This is to avoid logging facing-only updates
+                                if position.x != 0 || position.y != 0 {
+                                    log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
+                                }
+                                
+                                // Update the player's position and facing
+                                self.players.update_player_position(&username, position, facing);
+                            },
+                            _ => {
+                                log::info!("Received other message type: {:?}", server_message);
+                            }
+                        }
+                    } else if message.contains("player_joined") || message.contains("player_moved") {
+                        // Try to extract the username and position manually
+                        let parts: Vec<&str> = message.split_whitespace().collect();
+                        log::info!("Message parts: {:?}", parts);
+                        
+                        if parts.len() >= 5 {
+                            if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
+                                if pos + 4 < parts.len() {
+                                    let cmd = parts[pos];
+                                    let username = parts[pos + 1].to_string();
+                                    
+                                    // Skip if this is our own username
+                                    if username == self.username {
+                                        log::info!("Skipping own player message: {}", username);
+                                        continue;
+                                    }
+                                    
+                                    if let (Ok(x), Ok(y)) = (parts[pos + 2].parse::<i32>(), parts[pos + 3].parse::<i32>()) {
+                                        let facing_str = parts[pos + 4];
+                                        let facing = match facing_str {
+                                            "North" => protocol::Facing::North,
+                                            "East" => protocol::Facing::East,
+                                            "South" => protocol::Facing::South,
+                                            "West" => protocol::Facing::West,
+                                            // Handle the typo cases until the server is fixed
+                                            "Eorth" => protocol::Facing::East,
+                                            "Sorth" => protocol::Facing::South,
+                                            "Worth" => protocol::Facing::West,
+                                            _ => protocol::Facing::South,
+                                        };
+                                        
+                                        let position = protocol::Position::new(x, y);
+                                        
+                                        if cmd == "player_joined" {
+                                            log::info!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
+                                            self.players.add_or_update_player(username, position, facing);
+                                            
+                                            // Debug print all players
+                                            self.players.debug_print_players();
+                                        } else {
+                                            log::info!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
+                                            self.players.update_player_position(&username, position, facing);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
+                    
+                    // Break if we've processed too many messages to prevent infinite loops
+                    if message_count >= max_messages_per_frame {
+                        break;
+                    }
+                },
+                Err(NCError::NoNewData) => {
+                    // No more data, break the loop
+                    break;
+                },
+                Err(e) => {
+                    log::warn!("Error receiving from server: {:?}", e);
+                    break;
                 }
-            },
-            Err(NCError::NoNewData) => {
-                // No new data, this is normal
-            },
-            Err(e) => {
-                log::warn!("Error receiving from server: {:?}", e);
             }
         }
     }
@@ -804,7 +959,7 @@ impl GameState {
             .unwrap();
 
         // Draw all players
-        self.players.draw(canvas, &self.asset_manager).unwrap();
+        self.players.draw(ctx, canvas, &self.asset_manager).unwrap();
 
         // Draw position info for debugging - fixed to the camera view
         let pos_text = Text::new(format!(

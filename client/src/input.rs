@@ -2,6 +2,7 @@ use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
 use protocol::Facing::*;
 use protocol::Position;
+use protocol::ClientToServer;
 
 // Game constants
 pub const MOVEMENT_SPEED: i32 = 1;
@@ -38,26 +39,30 @@ pub fn handle_key_press(ctx: &Context) -> KeyPressState {
 pub fn handle_input(ctx: &Context) -> MovementState {
     let mut dx = 0;
     let mut dy = 0;
-    let mut direction = protocol::Facing::South;
+    let mut direction = protocol::Facing::South; // Default direction
+    let mut is_moving = false;
 
+    // Check for arrow key presses and WASD
     if ctx.keyboard.is_key_pressed(KeyCode::Up) || ctx.keyboard.is_key_pressed(KeyCode::W) {
         dy -= MOVEMENT_SPEED;
-        direction = North;
+        direction = protocol::Facing::North;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Down) || ctx.keyboard.is_key_pressed(KeyCode::S) {
         dy += MOVEMENT_SPEED;
-        direction = South;
+        direction = protocol::Facing::South;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Left) || ctx.keyboard.is_key_pressed(KeyCode::A) {
         dx -= MOVEMENT_SPEED;
-        direction = West;
+        direction = protocol::Facing::West;
+        is_moving = true;
     }
     if ctx.keyboard.is_key_pressed(KeyCode::Right) || ctx.keyboard.is_key_pressed(KeyCode::D) {
         dx += MOVEMENT_SPEED;
-        direction = East;
+        direction = protocol::Facing::East;
+        is_moving = true;
     }
-
-    let is_moving = dx != 0 || dy != 0;
 
     MovementState {
         is_moving,
@@ -67,19 +72,19 @@ pub fn handle_input(ctx: &Context) -> MovementState {
     }
 }
 
-pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState) {
+pub fn send_movement_to_server(nc: &mut NetClient, movement: &MovementState, username: &str) {
+    // Always send the username for identification
+    let username_msg = format!("username {}\r\n", username);
+    let _ = nc.send_str(username_msg);
+    
+    // Send facing direction to server regardless of movement
+    let facing_msg = format!("face {}\r\n", movement.direction);
+    let _ = nc.send_str(facing_msg);
+    
+    // Only send movement if actually moving
     if movement.is_moving {
-        // Convert to integer deltas for the server
-        let dx_int = movement.dx;
-        let dy_int = movement.dy;
-
-        if dx_int != 0 || dy_int != 0 {
-            let pos = Position::new(dx_int, dy_int);
-            let move_event = protocol::ClientToServer::AttemptPlayerMove(pos);
-            let _ = nc.send(move_event);
-
-            let dir_event = protocol::ClientToServer::AttemptPlayerFacingChange(movement.direction);
-            let _ = nc.send(dir_event);
-        }
+        // Send movement as a string in the format the server expects
+        let move_msg = format!("move {} {}\r\n", movement.dx, movement.dy);
+        let _ = nc.send_str(move_msg);
     }
 }
