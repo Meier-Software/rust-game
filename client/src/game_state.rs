@@ -1,18 +1,17 @@
 use ggez::{
     Context, GameResult,
-    graphics::{self, Color, DrawParam, Rect, Text},
+    graphics::{self, Canvas, Color, DrawParam, Drawable, Rect, Text},
     input::keyboard::KeyCode,
 };
 use protocol::{ClientToServer, Position};
 
 use crate::{
     assets::AssetManager,
-    filter::Filters,
-    input::{self, handle_key_press},
+    input,
     map::Map,
     net::NCError,
     net::NetClient,
-    player::{Player, Players},
+    player::Players,
 };
 
 // Constants
@@ -584,11 +583,13 @@ impl GameState {
 
         // Draw background
         let bg_color = Color::new(0.1, 0.1, 0.2, 1.0);
-        canvas.clear(bg_color);
+        canvas.set_color(bg_color);
+        canvas.clear();
 
         // Draw login text
         let login_text = Text::new("Press 'R' to register with username 'xyz' and password '123'");
-        let text_width = login_text.dimensions(ctx).unwrap().w;
+        let text_dimensions = login_text.dimensions(ctx);
+        let text_width = text_dimensions.w;
         
         canvas.draw(
             &login_text,
@@ -599,7 +600,8 @@ impl GameState {
         
         // Draw auto-login info
         let auto_text = Text::new("Auto-login will attempt to register after 2 seconds");
-        let auto_width = auto_text.dimensions(ctx).unwrap().w;
+        let auto_dimensions = auto_text.dimensions(ctx);
+        let auto_width = auto_dimensions.w;
         
         canvas.draw(
             &auto_text,
