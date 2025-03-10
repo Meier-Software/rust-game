@@ -44,6 +44,16 @@ pub struct GameState {
 
     // Map
     map: Map,
+    
+    // Login state
+    username: String,
+    password: String,
+    input_focus: InputField,
+}
+
+enum InputField {
+    Username,
+    Password,
 }
 
 impl GameState {
@@ -116,17 +126,16 @@ impl GameState {
             stage: if offline_mode { 
                 Stage::Offline 
             } else { 
-                // Send registration/login command if online
-                let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
-                let _ = nc.send(event);
-                // Wait a bit for server response
-                std::thread::sleep(std::time::Duration::from_millis(100));
+                // Start in PreAuth stage for online mode
                 Stage::PreAuth 
             },
             nc,
             asset_manager,
             players,
             map,
+            username: String::new(),
+            password: String::new(),
+            input_focus: InputField::Username,
         }
     }
 
@@ -307,11 +316,16 @@ impl GameState {
     }
 
     fn update_pre_auth(&mut self, ctx: &Context) {
-        // Check for keyboard input to register
-        if ctx.keyboard.is_key_just_pressed(KeyCode::R) {
-            log::info!("Manual registration: Sending register command for 'xyz' with password '123'");
-            let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
-            let _ = self.nc.send(event);
+        // Handle keyboard input for login fields
+        self.handle_login_input(ctx);
+        
+        // Check for Enter key to submit login/registration
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
+            if !self.username.is_empty() && !self.password.is_empty() {
+                log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
+                let event = ClientToServer::Register(self.username.clone(), self.password.clone());
+                let _ = self.nc.send(event);
+            }
         }
         
         // Handle authentication
@@ -328,18 +342,7 @@ impl GameState {
             }
             Err(err) => match err {
                 NoNewData => {
-                    // Auto-login for testing purposes
-                    // This will automatically try to login after a short delay
-                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
-                    unsafe {
-                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
-                        if AUTO_LOGIN_TIMER > 2.0 {
-                            AUTO_LOGIN_TIMER = 0.0;
-                            log::info!("Auto-login: Sending login command");
-                            let event = ClientToServer::Register("test_user".to_string(), "password".to_string());
-                            let _ = self.nc.send(event);
-                        }
-                    }
+                    // Auto-login for testing purposes is now disabled since we have manual input
                 }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
@@ -348,6 +351,87 @@ impl GameState {
                     log::error!("Some random send error???")
                 }
             },
+        }
+    }
+
+    // New method to handle keyboard input for login fields
+    fn handle_login_input(&mut self, ctx: &Context) {
+        // Switch focus with Tab key
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Tab) {
+            self.input_focus = match self.input_focus {
+                InputField::Username => InputField::Password,
+                InputField::Password => InputField::Username,
+            };
+        }
+        
+        // Get the currently focused field
+        let current_field = match self.input_focus {
+            InputField::Username => &mut self.username,
+            InputField::Password => &mut self.password,
+        };
+        
+        // Handle backspace
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Backspace) && !current_field.is_empty() {
+            current_field.pop();
+        }
+        
+        // Handle text input
+        // This is a simplified approach - in a real app, you'd use a proper text input system
+        for key in [
+            KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
+            KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
+            KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
+            KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
+            KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
+            KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
+            KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
+            KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
+        ].iter() {
+            if ctx.keyboard.is_key_just_pressed(*key) {
+                let char_to_add = match key {
+                    KeyCode::A => 'a',
+                    KeyCode::B => 'b',
+                    KeyCode::C => 'c',
+                    KeyCode::D => 'd',
+                    KeyCode::E => 'e',
+                    KeyCode::F => 'f',
+                    KeyCode::G => 'g',
+                    KeyCode::H => 'h',
+                    KeyCode::I => 'i',
+                    KeyCode::J => 'j',
+                    KeyCode::K => 'k',
+                    KeyCode::L => 'l',
+                    KeyCode::M => 'm',
+                    KeyCode::N => 'n',
+                    KeyCode::O => 'o',
+                    KeyCode::P => 'p',
+                    KeyCode::Q => 'q',
+                    KeyCode::R => 'r',
+                    KeyCode::S => 's',
+                    KeyCode::T => 't',
+                    KeyCode::U => 'u',
+                    KeyCode::V => 'v',
+                    KeyCode::W => 'w',
+                    KeyCode::X => 'x',
+                    KeyCode::Y => 'y',
+                    KeyCode::Z => 'z',
+                    KeyCode::Key1 => '1',
+                    KeyCode::Key2 => '2',
+                    KeyCode::Key3 => '3',
+                    KeyCode::Key4 => '4',
+                    KeyCode::Key5 => '5',
+                    KeyCode::Key6 => '6',
+                    KeyCode::Key7 => '7',
+                    KeyCode::Key8 => '8',
+                    KeyCode::Key9 => '9',
+                    KeyCode::Key0 => '0',
+                    KeyCode::Underline => '_',
+                    _ => continue,
+                };
+                
+                // Add the character to the current field
+                current_field.push(char_to_add);
+            }
         }
     }
 
@@ -592,27 +676,106 @@ impl GameState {
         ).unwrap();
         canvas.draw(&bg_rect, DrawParam::default());
 
-        // Draw login text
-        let login_text = Text::new("Press 'R' to register with username 'xyz' and password '123'");
-        let text_dimensions = login_text.dimensions(ctx).unwrap();
-        let text_width = text_dimensions.w;
+        // Draw title
+        let title_text = Text::new("Login / Register");
+        let title_dimensions = title_text.dimensions(ctx).unwrap();
+        let title_width = title_dimensions.w;
         
         canvas.draw(
-            &login_text,
+            &title_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - text_width / 2.0, screen_height / 2.0 - 20.0])
+                .dest([screen_width / 2.0 - title_width / 2.0, screen_height / 2.0 - 100.0])
                 .color(Color::WHITE),
         );
         
-        // Draw auto-login info
-        let auto_text = Text::new("Auto-login will attempt to register after 2 seconds");
-        let auto_dimensions = auto_text.dimensions(ctx).unwrap();
-        let auto_width = auto_dimensions.w;
+        // Draw username field
+        let username_label = Text::new("Username:");
+        canvas.draw(
+            &username_label,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 150.0, screen_height / 2.0 - 40.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw username input box
+        let username_box_color = if matches!(self.input_focus, InputField::Username) {
+            Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
+        } else {
+            Color::new(0.2, 0.2, 0.4, 1.0) // Normal
+        };
+        
+        let username_box = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 - 45.0, 200.0, 30.0),
+            username_box_color,
+        ).unwrap();
+        canvas.draw(&username_box, DrawParam::default());
+        
+        // Draw username text
+        let username_text = Text::new(&self.username);
+        canvas.draw(
+            &username_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 40.0, screen_height / 2.0 - 40.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw password field
+        let password_label = Text::new("Password:");
+        canvas.draw(
+            &password_label,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 150.0, screen_height / 2.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw password input box
+        let password_box_color = if matches!(self.input_focus, InputField::Password) {
+            Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
+        } else {
+            Color::new(0.2, 0.2, 0.4, 1.0) // Normal
+        };
+        
+        let password_box = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 - 5.0, 200.0, 30.0),
+            password_box_color,
+        ).unwrap();
+        canvas.draw(&password_box, DrawParam::default());
+        
+        // Draw password text (masked with asterisks)
+        let masked_password = "*".repeat(self.password.len());
+        let password_text = Text::new(&masked_password);
+        canvas.draw(
+            &password_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 40.0, screen_height / 2.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw instructions
+        let instructions_text = Text::new("Press Enter to login/register");
+        let instructions_dimensions = instructions_text.dimensions(ctx).unwrap();
+        let instructions_width = instructions_dimensions.w;
         
         canvas.draw(
-            &auto_text,
+            &instructions_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - auto_width / 2.0, screen_height / 2.0 + 20.0])
+                .dest([screen_width / 2.0 - instructions_width / 2.0, screen_height / 2.0 + 50.0])
+                .color(Color::YELLOW),
+        );
+        
+        // Draw tab instruction
+        let tab_text = Text::new("Press Tab to switch fields");
+        let tab_dimensions = tab_text.dimensions(ctx).unwrap();
+        let tab_width = tab_dimensions.w;
+        
+        canvas.draw(
+            &tab_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - tab_width / 2.0, screen_height / 2.0 + 80.0])
                 .color(Color::YELLOW),
         );
     }
