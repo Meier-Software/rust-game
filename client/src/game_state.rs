@@ -81,7 +81,7 @@ impl GameState {
     
     fn new_with_mode_and_map(ctx: &mut Context, offline_mode: bool, map: Map) -> Self {
         // Create network client based on mode
-        let mut nc = if offline_mode {
+        let nc = if offline_mode {
             NetClient::new_offline()
         } else {
             NetClient::new()
@@ -370,8 +370,8 @@ impl GameState {
             InputField::Password => &mut self.password,
         };
         
-        // Handle backspace
-        if ctx.keyboard.is_key_just_pressed(KeyCode::Backspace) && !current_field.is_empty() {
+        // Handle backspace - use KeyCode::Back instead of Backspace
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !current_field.is_empty() {
             current_field.pop();
         }
         
