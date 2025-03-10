@@ -60,7 +60,7 @@ defmodule Client.Authed do
         send(player_pid, {:set_username, username, self()})
         "Username set to " <> username
 
-      ["chat", message] ->
+      ["chat" | message] ->
         # Combine all parts of the message
         full_message = Enum.join([message], " ")
         Logger.info("Chat message from #{username}: #{full_message}")
