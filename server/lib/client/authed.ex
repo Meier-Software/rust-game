@@ -51,6 +51,11 @@ defmodule Client.Authed do
         send(player_pid, {:facing, dir, self()})
         "Facing " <> dir
 
+      ["username", username] ->
+        Logger.info("Client identified as username: #{username}")
+        send(player_pid, {:set_username, username, self()})
+        "Username set to " <> username
+
       ["update", "server"] ->
         Logger.info("Recompiling server.")
         Server.recompile()

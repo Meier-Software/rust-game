@@ -139,7 +139,7 @@ impl NetClient {
 
     pub fn parse_server_message(&self, message: &str) -> Option<protocol::ServerToClient> {
         // Extract the username from the message if it contains "USR-"
-        let username_from_prefix = message.split_whitespace()
+        let _username_from_prefix = message.split_whitespace()
             .find(|part| part.starts_with("USR-(") && part.ends_with("):"))
             .map(|part| part.trim_start_matches("USR-(").trim_end_matches("):").to_string());
         

@@ -55,6 +55,12 @@ defmodule Player do
         send(:zone_manager, {:player_moved, username, x, y, dir})
 
         loop_player(client_pid, stats, info)
+        
+      {:set_username, username, pid} ->
+        Logger.info("Setting username to: #{username}")
+        info = Map.put(info, :username, username)
+        send(pid, {:client_send, "Username set to #{username}"})
+        loop_player(client_pid, stats, info)
 
       {:move, x, y, pid} ->
         send(pid, {:moved, x, y})

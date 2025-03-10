@@ -441,7 +441,7 @@ impl GameState {
         let key_press = input::handle_key_press(ctx);
 
         // Send movement to server
-        input::send_movement_to_server(&mut self.nc, &movement);
+        input::send_movement_to_server(&mut self.nc, &movement, &self.username);
 
         // Update player position
         let delta_time = ctx.time.delta().as_secs_f32();
