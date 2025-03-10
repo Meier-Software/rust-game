@@ -182,13 +182,8 @@ impl Player {
             }
         };
 
-        log::info!("Trying to draw player with asset: {}", asset_name);
-
         // Draw the appropriate sprite
         if let Some(hero_asset) = asset_manager.get_asset(&asset_name) {
-            log::info!("Found hero asset: {} with dimensions {}x{}", 
-                      asset_name, hero_asset.img.width(), hero_asset.img.height());
-            
             // Determine if we need to flip the sprite horizontally for left-facing sprites
             // Since we're using the same sprites for both left and right, we need to flip the left-facing ones
             let flip_x = self.direction == protocol::Facing::West;
@@ -215,7 +210,6 @@ impl Player {
             }
 
             canvas.draw(&hero_asset.img, draw_params);
-            log::info!("Drew player sprite at ({}, {})", self.pos.x, self.pos.y);
             
             // Draw player name above the sprite
             let name_text = graphics::Text::new(&self.name);
@@ -232,12 +226,8 @@ impl Player {
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
-            log::info!("Asset {} not found, trying fallback: {}", asset_name, fallback_asset);
             
             if let Some(player_asset) = asset_manager.get_asset(&fallback_asset) {
-                log::info!("Found fallback asset: {} with dimensions {}x{}", 
-                          fallback_asset, player_asset.img.width(), player_asset.img.height());
-                
                 // Use a smaller scale factor for the fallback sprite as well
                 let scale_factor = 0.75;
                 
@@ -246,10 +236,7 @@ impl Player {
                     .scale([scale_factor, scale_factor]);
                     
                 canvas.draw(&player_asset.img, draw_params);
-                log::info!("Drew fallback player sprite at ({}, {})", self.pos.x, self.pos.y);
             } else {
-                log::warn!("Could not find asset for player: {} or fallback: {}", asset_name, fallback_asset);
-                
                 // Draw a colored rectangle as a fallback to make the player visible
                 let color = match self.character_type {
                     CharacterType::Knight => graphics::Color::RED,
@@ -269,8 +256,6 @@ impl Player {
                         .scale([rect_size, rect_size])
                         .color(color)
                 );
-                
-                log::info!("Drew colored rectangle for player at ({}, {})", self.pos.x, self.pos.y);
             }
         }
 
@@ -279,7 +264,6 @@ impl Player {
 
     pub fn switch_character(&mut self) {
         self.character_type = self.character_type.next();
-        log::info!("Switched to character: {:?}", self.character_type);
     }
 }
 
@@ -326,7 +310,6 @@ impl Players {
         for player in &mut self.other_players {
             if player.name == name {
                 // Update existing player
-                log::info!("Updating existing player: {} at position ({}, {})", name, pos.x, pos.y);
                 player.pos = pos;
                 player.direction = facing;
                 player.is_moving = true; // Assume they're moving since we got an update
@@ -335,38 +318,20 @@ impl Players {
         }
         
         // Player doesn't exist, add a new one
-        log::info!("Adding new player: {} at position ({}, {})", name, pos.x, pos.y);
         let mut new_player = Player::new(name, pos);
         new_player.direction = facing;
         self.other_players.push(new_player);
-        log::info!("Total players now: {} (including self)", self.other_players.len() + 1);
-        
-        // Debug print all players
-        self.debug_print_players();
     }
     
     // Remove a player by name
     pub fn remove_player(&mut self, name: &str) {
-        log::info!("Removing player: {}", name);
-        let before_count = self.other_players.len();
         self.other_players.retain(|player| player.name != name);
-        let after_count = self.other_players.len();
-        
-        if before_count != after_count {
-            log::info!("Player {} removed. Total players now: {} (including self)", name, after_count + 1);
-        } else {
-            log::warn!("Player {} not found for removal", name);
-        }
-        
-        // Debug print all players
-        self.debug_print_players();
     }
     
     // Update a player's position and facing
     pub fn update_player_position(&mut self, name: &str, pos: Position, facing: Facing) {
         for player in &mut self.other_players {
             if player.name == name {
-                log::info!("Updating player position: {} to ({}, {})", name, pos.x, pos.y);
                 player.pos = pos;
                 player.direction = facing;
                 player.is_moving = true; // They're moving since we got an update
@@ -377,7 +342,6 @@ impl Players {
         }
         
         // If we didn't find the player, add them
-        log::info!("Player {} not found for position update, adding new player", name);
         self.add_or_update_player(name.to_string(), pos, facing);
     }
     
@@ -386,10 +350,9 @@ impl Players {
         log::info!("--- Current Players ---");
         log::info!("Self: {} at ({}, {})", self.self_player.name, self.self_player.pos.x, self.self_player.pos.y);
         
-        for (i, player) in self.other_players.iter().enumerate() {
-            log::info!("Other[{}]: {} at ({}, {})", i, player.name, player.pos.x, player.pos.y);
+        for player in &self.other_players {
+            log::info!("Other: {} at ({}, {})", player.name, player.pos.x, player.pos.y);
         }
-        log::info!("----------------------");
     }
 
     pub fn draw(
@@ -402,9 +365,7 @@ impl Players {
         self.self_player.draw(ctx, canvas, asset_manager)?;
 
         // Draw other players
-        log::info!("Drawing {} other players", self.other_players.len());
         for player in &self.other_players {
-            log::info!("Drawing player: {} at ({}, {})", player.name, player.pos.x, player.pos.y);
             player.draw(ctx, canvas, asset_manager)?;
         }
 

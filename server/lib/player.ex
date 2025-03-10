@@ -8,7 +8,7 @@ defmodule Player do
   """
 
   def start(client_pid, username) do
-    Logger.info("New player-(#{username}) spawned for client-(#{inspect(client_pid)})")
+    Logger.info("Player joined: #{username}")
 
     stats = %{:hp => 10, :mp => 20}
 
@@ -27,7 +27,6 @@ defmodule Player do
     receive do
       {:heal, value, pid} ->
         {:ok, username} = Map.fetch(info, :username)
-        Logger.info("Player #{inspect(username)} healed.")
 
         {value, _} = Integer.parse(value)
         {:ok, hp} = Map.fetch(stats, :hp)
@@ -67,7 +66,7 @@ defmodule Player do
         loop_player(client_pid, stats, info)
         
       {:set_username, username, pid} ->
-        Logger.info("Setting username to: #{username}")
+        Logger.info("Player joined: #{username}")
         info = Map.put(info, :username, username)
         send(pid, {:client_send, "Username set to #{username}"})
         loop_player(client_pid, stats, info)
@@ -93,14 +92,12 @@ defmodule Player do
         loop_player(client_pid, stats, info)
 
       {:client_send, line} ->
-        Logger.info("Player got client send event.")
         send(client_pid, {:client_send, line})
         loop_player(client_pid, stats, info)
 
       err ->
         {:ok, username} = Map.fetch(info, :username)
-
-        Logger.info("Client Error #{inspect(err)} from #{username}.")
+        Logger.warn("Client Error #{inspect(err)} from #{username}.")
         loop_player(client_pid, stats, info)
 
       _ ->
