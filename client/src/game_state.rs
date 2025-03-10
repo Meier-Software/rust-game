@@ -1,7 +1,8 @@
 use ggez::{
-    Context, GameResult,
-    graphics::{self, Canvas, Color, DrawParam, Drawable, Rect, Text},
+    context::Context,
+    graphics::{self, Color, DrawParam, Drawable, Rect, Text},
     input::keyboard::KeyCode,
+    GameResult,
 };
 use protocol::{ClientToServer, Position};
 
@@ -581,14 +582,19 @@ impl GameState {
         // Set screen coordinates for UI elements
         canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
 
-        // Draw background
+        // Draw background - use a filled rectangle instead of clear
         let bg_color = Color::new(0.1, 0.1, 0.2, 1.0);
-        canvas.set_color(bg_color);
-        canvas.clear();
+        let bg_rect = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            Rect::new(0.0, 0.0, screen_width, screen_height),
+            bg_color,
+        ).unwrap();
+        canvas.draw(&bg_rect, DrawParam::default());
 
         // Draw login text
         let login_text = Text::new("Press 'R' to register with username 'xyz' and password '123'");
-        let text_dimensions = login_text.dimensions(ctx);
+        let text_dimensions = login_text.dimensions(ctx).unwrap();
         let text_width = text_dimensions.w;
         
         canvas.draw(
@@ -600,7 +606,7 @@ impl GameState {
         
         // Draw auto-login info
         let auto_text = Text::new("Auto-login will attempt to register after 2 seconds");
-        let auto_dimensions = auto_text.dimensions(ctx);
+        let auto_dimensions = auto_text.dimensions(ctx).unwrap();
         let auto_width = auto_dimensions.w;
         
         canvas.draw(
