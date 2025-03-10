@@ -8,7 +8,7 @@ use protocol::Position;
 
 use crate::{
     assets::AssetManager,
-    input,
+    input::{self, MovementState},
     map::Map,
     net::NetClient,
     player::Players,
@@ -722,9 +722,24 @@ impl GameState {
             }
         }
         
+        // Get the delta time for animations
+        let delta_time = ctx.time.delta().as_secs_f32();
+        
         // Handle chat input if in chat mode
         if self.is_chatting {
             self.handle_chat_input(ctx);
+            
+            // Even when chatting, we still need to update other players' animations
+            // Create a no-movement state for the local player
+            let no_movement = MovementState {
+                is_moving: false,
+                direction: self.players.self_player.direction,
+                dx: 0,
+                dy: 0,
+            };
+            
+            // Update player animations but not position
+            self.players.update(&no_movement, &self.map, GRID_SIZE, delta_time);
         } else {
             // Only process normal game input if not chatting
             // Get input
@@ -735,7 +750,6 @@ impl GameState {
             input::send_movement_to_server(&mut self.nc, &movement, &self.username, &self.players.self_player.pos);
 
             // Update player position
-            let delta_time = ctx.time.delta().as_secs_f32();
             self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
 
             // Handle character switching
@@ -930,48 +944,63 @@ impl GameState {
     }
 
     fn update_offline(&mut self, ctx: &Context) {
-        // Handle input
-        let movement = input::handle_input(ctx);
-        let key_press = input::handle_key_press(ctx);
-
-        // Update player position
-        let delta_time = ctx.time.delta().as_secs_f32();
-        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
-
-        // Handle character switching
-        if key_press.switch_character {
-            self.players.switch_character();
-        }
-
-        // Check for door transitions
-        let player_pos = self.players.self_player.pos;
-        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
-            // Update the current room
-            self.map.current_room = new_room;
-            
-            // Calculate the new position based on the door and facing direction
-            let grid_x = door_x as i32;
-            let grid_y = door_y as i32;
-            
-            // Apply a larger offset to ensure the player doesn't get stuck in the door
-            let offset = 2; // Use 2 grid cells of offset to prevent re-triggering
-            
-            let (new_x, new_y) = match facing {
-                protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
-                protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
-                protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
-                protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
-            };
-            
-            // Update player position and direction
-            self.players.self_player.pos.x = new_x;
-            self.players.self_player.pos.y = new_y;
-            self.players.self_player.direction = facing;
-            
-            log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
+        // Check for chat toggle with tilde key
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Grave) {
+            self.is_chatting = !self.is_chatting;
+            if !self.is_chatting && !self.chat_input.is_empty() {
+                // Display the message for the local player
+                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
+                
+                // Clear the chat input
+                self.chat_input.clear();
+            }
         }
         
-        // In offline mode, we can simulate other players for testing
+        // Get the delta time for animations
+        let delta_time = ctx.time.delta().as_secs_f32();
+        
+        // Handle chat input if in chat mode
+        if self.is_chatting {
+            self.handle_chat_input(ctx);
+            
+            // Even when chatting, we still need to update other players' animations
+            // Create a no-movement state for the local player
+            let no_movement = MovementState {
+                is_moving: false,
+                direction: self.players.self_player.direction,
+                dx: 0,
+                dy: 0,
+            };
+            
+            // Update player animations but not position
+            self.players.update(&no_movement, &self.map, GRID_SIZE, delta_time);
+        } else {
+            // Handle input
+            let movement = input::handle_input(ctx);
+            let key_press = input::handle_key_press(ctx);
+
+            // Update player position
+            self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+
+            // Handle character switching
+            if key_press.switch_character {
+                self.players.switch_character();
+            }
+
+            // Check for door transitions
+            let player_pos = self.players.self_player.pos;
+            if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
+                // Update the current room
+                self.map.current_room = new_room;
+                
+                // Update player position to the new coordinates
+                self.players.self_player.pos.x = door_x as i32;
+                self.players.self_player.pos.y = door_y as i32;
+                self.players.self_player.direction = facing;
+            }
+        }
+
+        // Simulate other players in offline mode
         self.simulate_other_players(delta_time);
     }
     
@@ -1049,7 +1078,7 @@ impl GameState {
             PreAuth => self.draw_pre_auth(ctx, &mut canvas),
             InMenu => {}
             InGame => self.draw_in_game(ctx, &mut canvas),
-            Offline => self.draw_in_game(ctx, &mut canvas), // Use the same drawing code for offline mode
+            Offline => self.draw_offline(ctx, &mut canvas), // Use the same drawing code for offline mode
         }
 
         // Draw offline mode indicator if in offline mode
@@ -1324,6 +1353,101 @@ impl GameState {
         }
     }
 
+    fn draw_offline(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
+        let screen_width = ctx.gfx.window().inner_size().width as f32;
+        let screen_height = ctx.gfx.window().inner_size().height as f32;
+
+        let zoomed_width = screen_width / CAMERA_ZOOM;
+        let zoomed_height = screen_height / CAMERA_ZOOM;
+
+        // Center the camera on the player's center (not top-left corner)
+        // Add half the player size to center on the player sprite
+        let player_center_x = self.players.self_player.pos.x + input::PLAYER_SIZE / 2;
+        let player_center_y = self.players.self_player.pos.y + input::PLAYER_SIZE / 2;
+
+        let camera_x = player_center_x - zoomed_width as i32 / 2;
+        let camera_y = player_center_y - zoomed_height as i32 / 2;
+
+        // Set the camera view
+        canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+
+        // Draw the map first (so it's behind the player)
+        self.map
+            .draw(ctx, canvas, &self.asset_manager, GRID_SIZE)
+            .unwrap();
+
+        // Draw all players
+        self.players.draw(ctx, canvas, &self.asset_manager).unwrap();
+
+        // Draw position info for debugging - fixed to the camera view
+        let pos_text = Text::new(format!(
+            "Pos: ({:.1}, {:.1}) - Room: {}",
+            self.players.self_player.pos.x, self.players.self_player.pos.y, self.map.current_room
+        ));
+
+        // Draw UI elements in screen coordinates by adding the camera position
+        canvas.draw(
+            &pos_text,
+            DrawParam::default()
+                .dest([(camera_x + 10) as f32, (camera_y + 10) as f32])
+                .color(Color::WHITE),
+        );
+        
+        // Draw chat input box if in chat mode
+        if self.is_chatting {
+            // Switch to screen coordinates for UI elements
+            canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+            
+            // Draw chat input background
+            let chat_bg = graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::fill(),
+                Rect::new(10.0, screen_height - 40.0, screen_width - 20.0, 30.0),
+                Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
+            ).unwrap();
+            canvas.draw(&chat_bg, DrawParam::default());
+            
+            // Draw chat input text
+            let chat_text = Text::new(format!("Chat: {}", self.chat_input));
+            canvas.draw(
+                &chat_text,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 35.0])
+                    .color(Color::WHITE),
+            );
+            
+            // Draw chat instructions
+            let chat_instructions = Text::new("Press Enter to send, Esc to cancel");
+            canvas.draw(
+                &chat_instructions,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 60.0])
+                    .color(Color::YELLOW),
+            );
+            
+            // Reset to game coordinates
+            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        } else {
+            // Draw chat hint when not in chat mode
+            // Switch to screen coordinates for UI elements
+            canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+            
+            let chat_hint = Text::new("Press ~ to chat");
+            canvas.draw(
+                &chat_hint,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 30.0])
+                    .color(Color::YELLOW),
+            );
+            
+            // Reset to game coordinates
+            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        }
+        
+        // Draw offline mode indicator
+        self.draw_offline_indicator(ctx, canvas);
+    }
+
     fn draw_offline_indicator(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
         // Draw offline mode indicator in the top-right corner
         let screen_width = ctx.gfx.window().inner_size().width as f32;
@@ -1341,11 +1465,13 @@ impl GameState {
         // Handle Enter key to send the message
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             if !self.chat_input.is_empty() {
-                // Send the chat message
-                let chat_msg = format!("chat {}\r\n", self.chat_input);
-                let _ = self.nc.send_str(chat_msg);
+                // In online mode, send the chat message to the server
+                if !self.nc.is_offline() {
+                    let chat_msg = format!("chat {}\r\n", self.chat_input);
+                    let _ = self.nc.send_str(chat_msg);
+                }
                 
-                // Also display the message for the local player
+                // Always display the message for the local player
                 self.players.set_player_chat_message(&self.username, self.chat_input.clone());
                 
                 // Clear the chat input and exit chat mode

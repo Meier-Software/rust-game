@@ -60,6 +60,17 @@ defmodule Client.Authed do
         send(player_pid, {:set_username, username, self()})
         "Username set to " <> username
 
+      ["chat", message | rest] ->
+        # Combine all parts of the message
+        full_message = Enum.join([message | rest], " ")
+        Logger.info("Chat message from #{username}: #{full_message}")
+        
+        # Send the chat message to the zone manager to broadcast to all players
+        send(:zone_manager, {:broadcast, "chat_message #{username} #{full_message}"})
+        
+        # Return a confirmation
+        "Chat message sent"
+
       ["update", "server"] ->
         Logger.info("Recompiling server.")
         Server.recompile()
