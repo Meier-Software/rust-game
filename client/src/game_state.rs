@@ -1,6 +1,7 @@
 use ggez::{
     Context, GameResult,
     graphics::{self, Color, DrawParam, Rect, Text},
+    input::keyboard::KeyCode,
 };
 use protocol::{ClientToServer, Position};
 
@@ -306,6 +307,13 @@ impl GameState {
     }
 
     fn update_pre_auth(&mut self, ctx: &Context) {
+        // Check for keyboard input to register
+        if ctx.keyboard.is_key_just_pressed(KeyCode::R) {
+            log::info!("Manual registration: Sending register command for 'xyz' with password '123'");
+            let event = ClientToServer::Register("xyz".to_string(), "123".to_string());
+            let _ = self.nc.send(event);
+        }
+        
         // Handle authentication
         let line = self.nc.recv();
         use crate::net::NCError::*;
@@ -567,16 +575,37 @@ impl GameState {
     }
 
     fn draw_pre_auth(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
-        // Draw login/authentication screen
+        // Draw a simple login screen
         let screen_width = ctx.gfx.window().inner_size().width as f32;
         let screen_height = ctx.gfx.window().inner_size().height as f32;
 
-        // Draw text for login screen
-        let text = Text::new("Authenticating...");
-        let text_pos = [screen_width / 2.0 - 50.0, screen_height / 2.0];
+        // Set screen coordinates for UI elements
+        canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+
+        // Draw background
+        let bg_color = Color::new(0.1, 0.1, 0.2, 1.0);
+        canvas.clear(bg_color);
+
+        // Draw login text
+        let login_text = Text::new("Press 'R' to register with username 'xyz' and password '123'");
+        let text_width = login_text.dimensions(ctx).unwrap().w;
+        
         canvas.draw(
-            &text,
-            DrawParam::default().dest(text_pos).color(Color::WHITE),
+            &login_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - text_width / 2.0, screen_height / 2.0 - 20.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw auto-login info
+        let auto_text = Text::new("Auto-login will attempt to register after 2 seconds");
+        let auto_width = auto_text.dimensions(ctx).unwrap().w;
+        
+        canvas.draw(
+            &auto_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - auto_width / 2.0, screen_height / 2.0 + 20.0])
+                .color(Color::YELLOW),
         );
     }
 
