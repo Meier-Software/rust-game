@@ -40,6 +40,16 @@ defmodule Player do
         send(pid, {:stats, stats, info})
         loop_player(client_pid, stats, info)
 
+      {:get_position, pid} ->
+        # Get current position and facing
+        {:ok, x} = Map.fetch(info, :x)
+        {:ok, y} = Map.fetch(info, :y)
+        {:ok, facing} = Map.fetch(info, :facing)
+        
+        # Send position info back to the requester
+        send(pid, {:position_info, x, y, facing})
+        loop_player(client_pid, stats, info)
+
       {:facing, dir, pid} ->
         send(pid, {:faced, dir})
         info = Map.put(info, :facing, dir)

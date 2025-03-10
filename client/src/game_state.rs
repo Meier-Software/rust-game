@@ -337,6 +337,16 @@ impl GameState {
                 // Check if login was successful and transition to InGame
                 if ok.contains("Logged in") || ok.contains("Registered user") {
                     log::info!("Authentication successful, entering game.");
+                    
+                    // Set the player's name to the username used for login
+                    self.players.self_player.name = self.username.clone();
+                    log::info!("Set player name to: {}", self.username);
+                    
+                    // Send the username to the server for identification
+                    let username_msg = format!("username {}", self.username);
+                    let _ = self.nc.send_str(username_msg);
+                    
+                    // Transition to InGame stage
                     self.stage = Stage::InGame;
                 }
             }
@@ -480,8 +490,10 @@ impl GameState {
             log::info!("Transitioned to room {} at position ({}, {})", new_room, new_x, new_y);
         }
         
-        // Handle network messages for other players
-        self.process_network_messages();
+        // Process network messages multiple times per frame to ensure we don't miss any
+        for _ in 0..3 {
+            self.process_network_messages();
+        }
     }
 
     // Method to process network messages for other players
@@ -829,7 +841,7 @@ impl GameState {
             .unwrap();
 
         // Draw all players
-        self.players.draw(canvas, &self.asset_manager).unwrap();
+        self.players.draw(ctx, canvas, &self.asset_manager).unwrap();
 
         // Draw position info for debugging - fixed to the camera view
         let pos_text = Text::new(format!(

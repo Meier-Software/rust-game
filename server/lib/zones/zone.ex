@@ -19,6 +19,24 @@ defmodule Zone do
       {:player_join, name, player_pid} ->
         zonename = Map.get(zone_data, :zonename)
         player_list = Map.get(zone_data, :playerlist)
+        
+        # Send information about existing players to the new player
+        for {existing_name, existing_pid} <- player_list do
+          Logger.info("Sending existing player info to new player: #{existing_name}")
+          # Request position from the existing player
+          send(existing_pid, {:get_position, self()})
+          
+          # Wait for the response
+          receive do
+            {:position_info, x, y, facing} ->
+              # Send the information to the new player
+              send(player_pid, {:client_send, "player_joined #{existing_name} #{x} #{y} #{facing}"})
+          after
+            1000 -> Logger.warn("Timeout waiting for position info from #{existing_name}")
+          end
+        end
+        
+        # Now add the new player to the list
         player_list = Map.put(player_list, name, player_pid)
         zone_data = Map.put(zone_data, :playerlist, player_list)
         Logger.info("New player #{inspect(name)} joined zone #{inspect(zone_data)}.")

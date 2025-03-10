@@ -165,6 +165,7 @@ impl Player {
 
     pub fn draw(
         &self,
+        ctx: &Context,
         canvas: &mut graphics::Canvas,
         asset_manager: &AssetManager,
     ) -> GameResult<()> {
@@ -232,6 +233,19 @@ impl Player {
 
             canvas.draw(&hero_asset.img, draw_params);
             log::info!("Drew player sprite at ({}, {})", self.pos.x, self.pos.y);
+            
+            // Draw player name above the sprite
+            let name_text = graphics::Text::new(&self.name);
+            let name_width = name_text.dimensions(ctx).unwrap().w;
+            canvas.draw(
+                &name_text,
+                graphics::DrawParam::default()
+                    .dest([
+                        self.pos.x as f32 + (hero_asset.img.width() as f32 * scale_factor / 2.0) - (name_width / 2.0),
+                        self.pos.y as f32 - 20.0
+                    ])
+                    .color(graphics::Color::WHITE),
+            );
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
@@ -397,17 +411,18 @@ impl Players {
 
     pub fn draw(
         &self,
+        ctx: &Context,
         canvas: &mut graphics::Canvas,
         asset_manager: &AssetManager,
     ) -> GameResult<()> {
         // Draw the main player
-        self.self_player.draw(canvas, asset_manager)?;
+        self.self_player.draw(ctx, canvas, asset_manager)?;
 
         // Draw other players
         log::info!("Drawing {} other players", self.other_players.len());
         for player in &self.other_players {
             log::info!("Drawing player: {} at ({}, {})", player.name, player.pos.x, player.pos.y);
-            player.draw(canvas, asset_manager)?;
+            player.draw(ctx, canvas, asset_manager)?;
         }
 
         Ok(())
