@@ -49,11 +49,23 @@ pub struct GameState {
     username: String,
     password: String,
     input_focus: InputField,
+    auth_action: AuthAction, // New field to track the current auth action
+    
+    // Chat state
+    is_chatting: bool,
+    chat_input: String,
 }
 
 enum InputField {
     Username,
     Password,
+    ActionType, // New field to track whether user wants to login or register
+}
+
+// Add a new enum to track the action type
+enum AuthAction {
+    Login,
+    Register,
 }
 
 impl GameState {
@@ -136,6 +148,9 @@ impl GameState {
             username: String::new(),
             password: String::new(),
             input_focus: InputField::Username,
+            auth_action: AuthAction::Login,
+            is_chatting: false,
+            chat_input: String::new(),
         }
     }
 
@@ -322,9 +337,18 @@ impl GameState {
         // Check for Enter key to submit login/registration
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             if !self.username.is_empty() && !self.password.is_empty() {
-                log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
-                let register_msg = format!("register {} {}\r\n", self.username, self.password);
-                let _ = self.nc.send_str(register_msg);
+                match self.auth_action {
+                    AuthAction::Login => {
+                        log::info!("Sending login for '{}' with password '{}'", self.username, self.password);
+                        let login_msg = format!("login {} {}\r\n", self.username, self.password);
+                        let _ = self.nc.send_str(login_msg);
+                    },
+                    AuthAction::Register => {
+                        log::info!("Sending registration for '{}' with password '{}'", self.username, self.password);
+                        let register_msg = format!("register {} {}\r\n", self.username, self.password);
+                        let _ = self.nc.send_str(register_msg);
+                    }
+                }
             }
         }
         
@@ -352,18 +376,8 @@ impl GameState {
             }
             Err(err) => match err {
                 NoNewData => {
-                    // Auto-login for testing purposes
-                    // This will automatically try to login after a short delay
-                    static mut AUTO_LOGIN_TIMER: f32 = 0.0;
-                    unsafe {
-                        AUTO_LOGIN_TIMER += ctx.time.delta().as_secs_f32();
-                        if AUTO_LOGIN_TIMER > 2.0 {
-                            AUTO_LOGIN_TIMER = 0.0;
-                            log::info!("Auto-login: Sending login command");
-                            let register_msg = format!("register test_user password\r\n");
-                            let _ = self.nc.send_str(register_msg);
-                        }
-                    }
+                    // Auto-login for testing purposes has been removed
+                    // We now have proper login/register UI
                 }
                 ConnectionError(e) => {
                     log::error!("Connection error: {}", e);
@@ -381,149 +395,155 @@ impl GameState {
         if ctx.keyboard.is_key_just_pressed(KeyCode::Tab) {
             self.input_focus = match self.input_focus {
                 InputField::Username => InputField::Password,
-                InputField::Password => InputField::Username,
+                InputField::Password => InputField::ActionType,
+                InputField::ActionType => InputField::Username,
             };
         }
         
-        // Get the currently focused field
-        let current_field = match self.input_focus {
-            InputField::Username => &mut self.username,
-            InputField::Password => &mut self.password,
-        };
-        
-        // Handle backspace - use KeyCode::Back instead of Backspace
-        if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !current_field.is_empty() {
-            current_field.pop();
+        // Handle action type switching with arrow keys when ActionType is focused
+        if matches!(self.input_focus, InputField::ActionType) {
+            if ctx.keyboard.is_key_just_pressed(KeyCode::Left) || 
+               ctx.keyboard.is_key_just_pressed(KeyCode::Right) {
+                self.auth_action = match self.auth_action {
+                    AuthAction::Login => AuthAction::Register,
+                    AuthAction::Register => AuthAction::Login,
+                };
+            }
         }
         
-        // Handle text input
-        // This is a simplified approach - in a real app, you'd use a proper text input system
-        for key in [
-            KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
-            KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
-            KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
-            KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
-            KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
-            KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
-            KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
-            KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
-        ].iter() {
-            if ctx.keyboard.is_key_just_pressed(*key) {
-                let char_to_add = match key {
-                    KeyCode::A => 'a',
-                    KeyCode::B => 'b',
-                    KeyCode::C => 'c',
-                    KeyCode::D => 'd',
-                    KeyCode::E => 'e',
-                    KeyCode::F => 'f',
-                    KeyCode::G => 'g',
-                    KeyCode::H => 'h',
-                    KeyCode::I => 'i',
-                    KeyCode::J => 'j',
-                    KeyCode::K => 'k',
-                    KeyCode::L => 'l',
-                    KeyCode::M => 'm',
-                    KeyCode::N => 'n',
-                    KeyCode::O => 'o',
-                    KeyCode::P => 'p',
-                    KeyCode::Q => 'q',
-                    KeyCode::R => 'r',
-                    KeyCode::S => 's',
-                    KeyCode::T => 't',
-                    KeyCode::U => 'u',
-                    KeyCode::V => 'v',
-                    KeyCode::W => 'w',
-                    KeyCode::X => 'x',
-                    KeyCode::Y => 'y',
-                    KeyCode::Z => 'z',
-                    KeyCode::Key1 => '1',
-                    KeyCode::Key2 => '2',
-                    KeyCode::Key3 => '3',
-                    KeyCode::Key4 => '4',
-                    KeyCode::Key5 => '5',
-                    KeyCode::Key6 => '6',
-                    KeyCode::Key7 => '7',
-                    KeyCode::Key8 => '8',
-                    KeyCode::Key9 => '9',
-                    KeyCode::Key0 => '0',
-                    KeyCode::Underline => '_',
-                    _ => continue,
-                };
-                
-                // Add the character to the current field
-                current_field.push(char_to_add);
+        // Get the currently focused field if it's a text field
+        if !matches!(self.input_focus, InputField::ActionType) {
+            let current_field = match self.input_focus {
+                InputField::Username => &mut self.username,
+                InputField::Password => &mut self.password,
+                _ => unreachable!(),
+            };
+            
+            // Handle backspace - use KeyCode::Back instead of Backspace
+            if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !current_field.is_empty() {
+                current_field.pop();
+            }
+            
+            // Handle text input
+            // This is a simplified approach - in a real app, you'd use a proper text input system
+            for key in [
+                KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
+                KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
+                KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
+                KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
+                KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
+                KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
+                KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
+                KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
+            ].iter() {
+                if ctx.keyboard.is_key_just_pressed(*key) {
+                    let char_to_add = match key {
+                        KeyCode::A => 'a',
+                        KeyCode::B => 'b',
+                        KeyCode::C => 'c',
+                        KeyCode::D => 'd',
+                        KeyCode::E => 'e',
+                        KeyCode::F => 'f',
+                        KeyCode::G => 'g',
+                        KeyCode::H => 'h',
+                        KeyCode::I => 'i',
+                        KeyCode::J => 'j',
+                        KeyCode::K => 'k',
+                        KeyCode::L => 'l',
+                        KeyCode::M => 'm',
+                        KeyCode::N => 'n',
+                        KeyCode::O => 'o',
+                        KeyCode::P => 'p',
+                        KeyCode::Q => 'q',
+                        KeyCode::R => 'r',
+                        KeyCode::S => 's',
+                        KeyCode::T => 't',
+                        KeyCode::U => 'u',
+                        KeyCode::V => 'v',
+                        KeyCode::W => 'w',
+                        KeyCode::X => 'x',
+                        KeyCode::Y => 'y',
+                        KeyCode::Z => 'z',
+                        KeyCode::Key1 => '1',
+                        KeyCode::Key2 => '2',
+                        KeyCode::Key3 => '3',
+                        KeyCode::Key4 => '4',
+                        KeyCode::Key5 => '5',
+                        KeyCode::Key6 => '6',
+                        KeyCode::Key7 => '7',
+                        KeyCode::Key8 => '8',
+                        KeyCode::Key9 => '9',
+                        KeyCode::Key0 => '0',
+                        KeyCode::Underline => '_',
+                        _ => continue,
+                    };
+                    
+                    // Add the character to the current field
+                    current_field.push(char_to_add);
+                }
             }
         }
     }
 
     fn update_in_game(&mut self, ctx: &Context) {
-        // Get input
-        let movement = input::handle_input(ctx);
-        let key_press = input::handle_key_press(ctx);
-
-        // Send movement to server
-        input::send_movement_to_server(&mut self.nc, &movement, &self.username);
-
-        // Update player position
-        let delta_time = ctx.time.delta().as_secs_f32();
-        self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
-
-        // Handle character switching
-        if key_press.switch_character {
-            self.players.switch_character();
-        }
-
-        // Check for door transitions
-        let player_pos = self.players.self_player.pos;
-        if let Some((new_room, door_x, door_y, facing)) = self.map.check_door_transition(player_pos.x, player_pos.y, GRID_SIZE) {
-            // Update the current room
-            self.map.current_room = new_room;
-            
-            // Calculate the new position based on the door and facing direction
-            let grid_x = door_x as i32;
-            let grid_y = door_y as i32;
-            
-            // Apply a larger offset to ensure the player doesn't get stuck in the door
-            let offset = 2; // Use 2 grid cells of offset to prevent re-triggering
-            
-            let (new_x, new_y) = match facing {
-                protocol::Facing::North => (grid_x * GRID_SIZE, grid_y * GRID_SIZE - offset * GRID_SIZE),
-                protocol::Facing::South => (grid_x * GRID_SIZE, grid_y * GRID_SIZE + offset * GRID_SIZE),
-                protocol::Facing::East => (grid_x * GRID_SIZE + offset * GRID_SIZE, grid_y * GRID_SIZE),
-                protocol::Facing::West => (grid_x * GRID_SIZE - offset * GRID_SIZE, grid_y * GRID_SIZE),
-            };
-            
-            // Update player position and direction
-            self.players.self_player.pos.x = new_x;
-            self.players.self_player.pos.y = new_y;
-            self.players.self_player.direction = facing;
-            
-            log::info!("Self position: ({}, {}) - Room: {}", new_x, new_y, new_room);
-            
-            // Send an extra position update after teleporting
-            self.send_absolute_position();
-        }
-        
-        // Periodically send position updates even when not moving
-        // This ensures other clients know where we are
-        static mut POSITION_UPDATE_TIMER: f32 = 0.0;
-        unsafe {
-            POSITION_UPDATE_TIMER += delta_time;
-            if POSITION_UPDATE_TIMER > 1.0 {  // Send position update every second
-                POSITION_UPDATE_TIMER = 0.0;
+        // Check for chat toggle with tilde key
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Grave) {
+            self.is_chatting = !self.is_chatting;
+            if !self.is_chatting && !self.chat_input.is_empty() {
+                // Send the chat message when exiting chat mode if there's a message
+                let chat_msg = format!("chat {}\r\n", self.chat_input);
+                let _ = self.nc.send_str(chat_msg);
                 
-                // Send current position
-                self.send_absolute_position();
+                // Also display the message for the local player
+                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
                 
-                // Log self position
-                log::info!("Self position: ({}, {}) - Room: {}", 
-                          self.players.self_player.pos.x, 
-                          self.players.self_player.pos.y,
-                          self.map.current_room);
+                // Clear the chat input
+                self.chat_input.clear();
             }
         }
         
-        // Process network messages multiple times per frame to ensure we don't miss any
+        // Handle chat input if in chat mode
+        if self.is_chatting {
+            self.handle_chat_input(ctx);
+        } else {
+            // Only process normal game input if not chatting
+            // Get input
+            let movement = input::handle_input(ctx);
+            let key_press = input::handle_key_press(ctx);
+
+            // Send movement to server
+            input::send_movement_to_server(&mut self.nc, &movement, &self.username);
+
+            // Update player position
+            let delta_time = ctx.time.delta().as_secs_f32();
+            self.players.update(&movement, &self.map, GRID_SIZE, delta_time);
+
+            // Handle character switching
+            if key_press.switch_character {
+                self.players.switch_character();
+            }
+
+            // Check for door transitions
+            let player_pos = self.players.self_player.pos;
+            if let Some((new_room, new_x, new_y, facing)) = self.map.check_door_transition(
+                player_pos.x,
+                player_pos.y,
+                GRID_SIZE,
+            ) {
+                // Update the current room
+                self.map.current_room = new_room;
+                
+                // Update player position to the new coordinates
+                self.players.self_player.pos.x = new_x;
+                self.players.self_player.pos.y = new_y;
+                self.players.self_player.direction = facing;
+                
+                // Send the new position to the server
+                self.send_absolute_position();
+            }
+        }
+
+        // Process network messages regardless of chat state
         for _ in 0..3 {
             self.process_network_messages();
         }
@@ -611,6 +631,12 @@ impl GameState {
                                 // Update the player's position and facing
                                 self.players.update_player_position(&username, position, facing);
                             },
+                            protocol::ServerToClient::ChatMessage(username, message) => {
+                                log::info!("Chat message from {}: {}", username, message);
+                                
+                                // Display the chat message above the player
+                                self.players.set_player_chat_message(&username, message);
+                            },
                             _ => {
                                 log::info!("Received other message type: {:?}", server_message);
                             }
@@ -664,17 +690,13 @@ impl GameState {
                         }
                     }
                     
-                    // Break if we've processed too many messages to prevent infinite loops
+                    // Break if we've processed too many messages in one frame
                     if message_count >= max_messages_per_frame {
                         break;
                     }
                 },
-                Err(NCError::NoNewData) => {
-                    // No more data, break the loop
-                    break;
-                },
-                Err(e) => {
-                    log::warn!("Error receiving from server: {:?}", e);
+                Err(_) => {
+                    // No more messages to process
                     break;
                 }
             }
@@ -910,15 +932,52 @@ impl GameState {
                 .color(Color::WHITE),
         );
         
+        // Draw action type selection (Login/Register)
+        let action_label = Text::new("Action:");
+        canvas.draw(
+            &action_label,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 150.0, screen_height / 2.0 + 40.0])
+                .color(Color::WHITE),
+        );
+        
+        // Draw action type selection box
+        let action_box_color = if matches!(self.input_focus, InputField::ActionType) {
+            Color::new(0.3, 0.3, 0.6, 1.0) // Highlighted
+        } else {
+            Color::new(0.2, 0.2, 0.4, 1.0) // Normal
+        };
+        
+        let action_box = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            Rect::new(screen_width / 2.0 - 50.0, screen_height / 2.0 + 35.0, 200.0, 30.0),
+            action_box_color,
+        ).unwrap();
+        canvas.draw(&action_box, DrawParam::default());
+        
+        // Draw current action type
+        let action_text = match self.auth_action {
+            AuthAction::Login => "Login",
+            AuthAction::Register => "Register",
+        };
+        let action_text = Text::new(action_text);
+        canvas.draw(
+            &action_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - 40.0, screen_height / 2.0 + 40.0])
+                .color(Color::WHITE),
+        );
+        
         // Draw instructions
-        let instructions_text = Text::new("Press Enter to login/register");
+        let instructions_text = Text::new("Press Enter to submit");
         let instructions_dimensions = instructions_text.dimensions(ctx).unwrap();
         let instructions_width = instructions_dimensions.w;
         
         canvas.draw(
             &instructions_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - instructions_width / 2.0, screen_height / 2.0 + 50.0])
+                .dest([screen_width / 2.0 - instructions_width / 2.0, screen_height / 2.0 + 80.0])
                 .color(Color::YELLOW),
         );
         
@@ -930,7 +989,19 @@ impl GameState {
         canvas.draw(
             &tab_text,
             DrawParam::default()
-                .dest([screen_width / 2.0 - tab_width / 2.0, screen_height / 2.0 + 80.0])
+                .dest([screen_width / 2.0 - tab_width / 2.0, screen_height / 2.0 + 110.0])
+                .color(Color::YELLOW),
+        );
+        
+        // Draw arrow key instruction for action type
+        let arrow_text = Text::new("Use Left/Right arrows to change action type");
+        let arrow_dimensions = arrow_text.dimensions(ctx).unwrap();
+        let arrow_width = arrow_dimensions.w;
+        
+        canvas.draw(
+            &arrow_text,
+            DrawParam::default()
+                .dest([screen_width / 2.0 - arrow_width / 2.0, screen_height / 2.0 + 140.0])
                 .color(Color::YELLOW),
         );
     }
@@ -974,6 +1045,57 @@ impl GameState {
                 .dest([(camera_x + 10) as f32, (camera_y + 10) as f32])
                 .color(Color::WHITE),
         );
+        
+        // Draw chat input box if in chat mode
+        if self.is_chatting {
+            // Switch to screen coordinates for UI elements
+            canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+            
+            // Draw chat input background
+            let chat_bg = graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::fill(),
+                Rect::new(10.0, screen_height - 40.0, screen_width - 20.0, 30.0),
+                Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
+            ).unwrap();
+            canvas.draw(&chat_bg, DrawParam::default());
+            
+            // Draw chat input text
+            let chat_text = Text::new(format!("Chat: {}", self.chat_input));
+            canvas.draw(
+                &chat_text,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 35.0])
+                    .color(Color::WHITE),
+            );
+            
+            // Draw chat instructions
+            let chat_instructions = Text::new("Press Enter to send, Esc to cancel");
+            canvas.draw(
+                &chat_instructions,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 60.0])
+                    .color(Color::YELLOW),
+            );
+            
+            // Reset to game coordinates
+            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        } else {
+            // Draw chat hint when not in chat mode
+            // Switch to screen coordinates for UI elements
+            canvas.set_screen_coordinates(Rect::new(0.0, 0.0, screen_width, screen_height));
+            
+            let chat_hint = Text::new("Press ~ to chat");
+            canvas.draw(
+                &chat_hint,
+                DrawParam::default()
+                    .dest([20.0, screen_height - 30.0])
+                    .color(Color::YELLOW),
+            );
+            
+            // Reset to game coordinates
+            canvas.set_screen_coordinates(Rect::new(camera_x as f32, camera_y as f32, zoomed_width, zoomed_height));
+        }
     }
 
     fn draw_offline_indicator(&self, ctx: &Context, canvas: &mut graphics::Canvas) {
@@ -986,5 +1108,112 @@ impl GameState {
             &text,
             DrawParam::default().dest(text_pos).color(Color::YELLOW),
         );
+    }
+
+    // Method to handle chat input
+    fn handle_chat_input(&mut self, ctx: &Context) {
+        // Handle Enter key to send the message
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
+            if !self.chat_input.is_empty() {
+                // Send the chat message
+                let chat_msg = format!("chat {}\r\n", self.chat_input);
+                let _ = self.nc.send_str(chat_msg);
+                
+                // Also display the message for the local player
+                self.players.set_player_chat_message(&self.username, self.chat_input.clone());
+                
+                // Clear the chat input and exit chat mode
+                self.chat_input.clear();
+                self.is_chatting = false;
+            } else {
+                // If input is empty, just exit chat mode
+                self.is_chatting = false;
+            }
+            return;
+        }
+        
+        // Handle Escape key to cancel chat
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Escape) {
+            self.chat_input.clear();
+            self.is_chatting = false;
+            return;
+        }
+        
+        // Handle backspace
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !self.chat_input.is_empty() {
+            self.chat_input.pop();
+        }
+        
+        // Handle text input
+        for key in [
+            KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D, KeyCode::E,
+            KeyCode::F, KeyCode::G, KeyCode::H, KeyCode::I, KeyCode::J,
+            KeyCode::K, KeyCode::L, KeyCode::M, KeyCode::N, KeyCode::O,
+            KeyCode::P, KeyCode::Q, KeyCode::R, KeyCode::S, KeyCode::T,
+            KeyCode::U, KeyCode::V, KeyCode::W, KeyCode::X, KeyCode::Y,
+            KeyCode::Z, KeyCode::Key1, KeyCode::Key2, KeyCode::Key3,
+            KeyCode::Key4, KeyCode::Key5, KeyCode::Key6, KeyCode::Key7,
+            KeyCode::Key8, KeyCode::Key9, KeyCode::Key0, KeyCode::Underline,
+            KeyCode::Space, KeyCode::Comma, KeyCode::Period, KeyCode::Slash,
+            KeyCode::Semicolon, KeyCode::Apostrophe, KeyCode::LBracket, KeyCode::RBracket,
+            KeyCode::Backslash, KeyCode::Minus, KeyCode::Equals,
+        ].iter() {
+            if ctx.keyboard.is_key_just_pressed(*key) {
+                let char_to_add = match key {
+                    KeyCode::A => 'a',
+                    KeyCode::B => 'b',
+                    KeyCode::C => 'c',
+                    KeyCode::D => 'd',
+                    KeyCode::E => 'e',
+                    KeyCode::F => 'f',
+                    KeyCode::G => 'g',
+                    KeyCode::H => 'h',
+                    KeyCode::I => 'i',
+                    KeyCode::J => 'j',
+                    KeyCode::K => 'k',
+                    KeyCode::L => 'l',
+                    KeyCode::M => 'm',
+                    KeyCode::N => 'n',
+                    KeyCode::O => 'o',
+                    KeyCode::P => 'p',
+                    KeyCode::Q => 'q',
+                    KeyCode::R => 'r',
+                    KeyCode::S => 's',
+                    KeyCode::T => 't',
+                    KeyCode::U => 'u',
+                    KeyCode::V => 'v',
+                    KeyCode::W => 'w',
+                    KeyCode::X => 'x',
+                    KeyCode::Y => 'y',
+                    KeyCode::Z => 'z',
+                    KeyCode::Key1 => '1',
+                    KeyCode::Key2 => '2',
+                    KeyCode::Key3 => '3',
+                    KeyCode::Key4 => '4',
+                    KeyCode::Key5 => '5',
+                    KeyCode::Key6 => '6',
+                    KeyCode::Key7 => '7',
+                    KeyCode::Key8 => '8',
+                    KeyCode::Key9 => '9',
+                    KeyCode::Key0 => '0',
+                    KeyCode::Space => ' ',
+                    KeyCode::Comma => ',',
+                    KeyCode::Period => '.',
+                    KeyCode::Slash => '/',
+                    KeyCode::Semicolon => ';',
+                    KeyCode::Apostrophe => '\'',
+                    KeyCode::LBracket => '[',
+                    KeyCode::RBracket => ']',
+                    KeyCode::Backslash => '\\',
+                    KeyCode::Minus => '-',
+                    KeyCode::Equals => '=',
+                    KeyCode::Underline => '_',
+                    _ => continue,
+                };
+                
+                // Add the character to the chat input
+                self.chat_input.push(char_to_add);
+            }
+        }
     }
 }

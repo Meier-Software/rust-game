@@ -292,6 +292,34 @@ impl NetClient {
                     }
                 }
             }
+        } else if message.contains("chat_message") {
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            log::info!("Chat message parts: {:?}", parts);
+            
+            // Find the position of "chat_message" in the message
+            if let Some(pos_index) = parts.iter().position(|&part| part == "chat_message") {
+                log::info!("Found chat_message at position {}", pos_index);
+                
+                // Check if we have enough parts after "chat_message"
+                if pos_index + 2 < parts.len() {
+                    // The format is "chat_message username message_content..."
+                    let username = parts[pos_index + 1].to_string();
+                    
+                    // The rest of the message is the chat content
+                    let chat_content = parts[pos_index + 2..].join(" ");
+                    
+                    log::info!("Chat message from {}: {}", username, chat_content);
+                    
+                    return Some(protocol::ServerToClient::ChatMessage(
+                        username,
+                        chat_content,
+                    ));
+                } else {
+                    log::warn!("Not enough parts after chat_message in message");
+                }
+            } else {
+                log::warn!("Could not find chat_message in message parts");
+            }
         } else {
             log::info!("Message does not contain player_moved, player_joined, or player_left");
         }

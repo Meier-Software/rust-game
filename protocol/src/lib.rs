@@ -34,6 +34,7 @@ pub enum ServerToClient {
     PlayerJoined(String, Position, Facing),
     PlayerLeft(String),
     PlayerMoved(String, Position, Facing),
+    ChatMessage(String, String),
 }
 
 #[derive(Debug)]
@@ -42,7 +43,8 @@ pub enum ClientToServer {
     AttemptPlayerFacingChange(Facing),
 
     Register(String, String),
-    Login(String, String)
+    Login(String, String),
+    ChatMessage(String),
 }
 
 impl ClientToServer {
@@ -53,6 +55,7 @@ impl ClientToServer {
             AttemptPlayerFacingChange(facing) => format!("face {}\r\n", facing),
             Register(username, password) => format!("register {} {}\r\n", username, password),
             Login(username, password) => format!("login {} {}\r\n", username, password),
+            ChatMessage(message) => format!("chat {}\r\n", message),
         };
         line
     }

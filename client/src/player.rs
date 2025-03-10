@@ -64,6 +64,8 @@ pub struct Player {
     pub idle_timer: f32,               // Track how long the player has been idle
     pub is_in_idle_animation: bool,    // Whether the player is in the idle animation
     pub character_type: CharacterType, // The current character model
+    pub chat_message: Option<String>,  // Current chat message to display
+    pub chat_timer: f32,               // How long to display the chat message
 }
 
 impl Player {
@@ -78,6 +80,8 @@ impl Player {
             idle_timer: 0.0,
             is_in_idle_animation: false,
             character_type: CharacterType::Knight,
+            chat_message: None,
+            chat_timer: 0.0,
         }
     }
 
@@ -109,6 +113,14 @@ impl Player {
             if map.is_valid_position(self.pos.x, new_y_only, grid_size) {
                 self.pos.y = new_y_only;
                 self.is_moving = movement.is_moving;
+            }
+        }
+
+        // Update chat message timer
+        if let Some(_) = &self.chat_message {
+            self.chat_timer -= delta_time;
+            if self.chat_timer <= 0.0 {
+                self.chat_message = None;
             }
         }
 
@@ -211,6 +223,9 @@ impl Player {
 
             canvas.draw(&hero_asset.img, draw_params);
             
+            // Calculate the center position for text elements
+            let center_x = self.pos.x as f32 + (hero_asset.img.width() as f32 * scale_factor / 2.0);
+            
             // Draw player name above the sprite
             let name_text = graphics::Text::new(&self.name);
             let name_width = name_text.dimensions(ctx).unwrap().w;
@@ -218,11 +233,48 @@ impl Player {
                 &name_text,
                 graphics::DrawParam::default()
                     .dest([
-                        self.pos.x as f32 + (hero_asset.img.width() as f32 * scale_factor / 2.0) - (name_width / 2.0),
+                        center_x - (name_width / 2.0),
                         self.pos.y as f32 - 20.0
                     ])
                     .color(graphics::Color::WHITE),
             );
+            
+            // Draw chat message above the player name if there is one
+            if let Some(message) = &self.chat_message {
+                // Create a chat bubble with the message
+                let chat_text = graphics::Text::new(message);
+                let chat_width = chat_text.dimensions(ctx).unwrap().w;
+                let chat_height = chat_text.dimensions(ctx).unwrap().h;
+                
+                // Draw chat bubble background
+                let bubble_padding = 5.0;
+                let bubble_rect = graphics::Rect::new(
+                    center_x - (chat_width / 2.0) - bubble_padding,
+                    self.pos.y as f32 - 45.0 - chat_height,
+                    chat_width + (bubble_padding * 2.0),
+                    chat_height + (bubble_padding * 2.0)
+                );
+                
+                let bubble = graphics::Mesh::new_rectangle(
+                    ctx,
+                    graphics::DrawMode::fill(),
+                    bubble_rect,
+                    graphics::Color::new(0.0, 0.0, 0.0, 0.7), // Semi-transparent black
+                ).unwrap();
+                
+                canvas.draw(&bubble, graphics::DrawParam::default());
+                
+                // Draw chat message text
+                canvas.draw(
+                    &chat_text,
+                    graphics::DrawParam::default()
+                        .dest([
+                            center_x - (chat_width / 2.0),
+                            self.pos.y as f32 - 45.0 - chat_height + bubble_padding
+                        ])
+                        .color(graphics::Color::WHITE),
+                );
+            }
         } else {
             // Fallback to the old player sprite if the new assets aren't found
             let fallback_asset = character.to_string();
@@ -264,6 +316,12 @@ impl Player {
 
     pub fn switch_character(&mut self) {
         self.character_type = self.character_type.next();
+    }
+
+    // Add a new method to set a chat message
+    pub fn set_chat_message(&mut self, message: String) {
+        self.chat_message = Some(message);
+        self.chat_timer = 5.0; // Display for 5 seconds
     }
 }
 
@@ -371,5 +429,22 @@ impl Players {
         }
 
         Ok(())
+    }
+
+    // Add a method to set a chat message for a specific player
+    pub fn set_player_chat_message(&mut self, username: &str, message: String) {
+        // Check if it's the self player
+        if self.self_player.name == username {
+            self.self_player.set_chat_message(message);
+            return;
+        }
+        
+        // Otherwise, find the player in other_players
+        for player in &mut self.other_players {
+            if player.name == username {
+                player.set_chat_message(message);
+                break;
+            }
+        }
     }
 }
