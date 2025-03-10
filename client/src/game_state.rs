@@ -564,6 +564,11 @@ impl GameState {
                 Ok(message) => {
                     message_count += 1;
                     
+                    // Skip "Invalid protocol" messages
+                    if message.contains("Invalid protocol") {
+                        continue;
+                    }
+                    
                     // Parse the message to see if it's a player update
                     if let Some(server_message) = self.nc.parse_server_message(&message) {
                         match server_message {
@@ -586,8 +591,13 @@ impl GameState {
                                     continue;
                                 }
                                 
-                                // Only log position updates
-                                log::info!("Player position: {} at ({}, {})", username, position.x, position.y);
+                                // Only log position updates if the position is not (0,0)
+                                // This is to avoid logging facing-only updates
+                                if position.x != 0 || position.y != 0 {
+                                    log::info!("Player position: {} at ({}, {})", username, position.x, position.y);
+                                }
+                                
+                                // Update the player's position and facing
                                 self.players.update_player_position(&username, position, facing);
                             },
                             _ => {

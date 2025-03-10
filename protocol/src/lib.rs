@@ -20,9 +20,9 @@ impl std::fmt::Display for Facing {
         use Facing::*;
         let a = match self {
             North => "North".to_string(),
-            East => "Eorth".to_string(),
-            South => "Sorth".to_string(),
-            West => "Worth".to_string(),
+            East => "East".to_string(),
+            South => "South".to_string(),
+            West => "West".to_string(),
         };
         write!(f, "{}", a)
     }

@@ -251,6 +251,47 @@ impl NetClient {
             } else {
                 log::warn!("Could not find player_left in message parts");
             }
+        } else if message.contains("Facing") {
+            // Extract the username from the message
+            let parts: Vec<&str> = message.split_whitespace().collect();
+            
+            // Find the username part
+            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
+            if let Some(username_part) = username_part {
+                // Extract username from "USR-(username):"
+                let username = username_part
+                    .trim_start_matches("USR-(")
+                    .trim_end_matches("):")
+                    .to_string();
+                
+                // Find the facing direction
+                if let Some(facing_index) = parts.iter().position(|&part| part == "Facing") {
+                    if facing_index + 1 < parts.len() {
+                        let facing_str = parts[facing_index + 1];
+                        let facing = match facing_str {
+                            "North" => protocol::Facing::North,
+                            "East" => protocol::Facing::East,
+                            "South" => protocol::Facing::South,
+                            "West" => protocol::Facing::West,
+                            // Handle the typo cases until the server is fixed
+                            "Eorth" => protocol::Facing::East,
+                            "Sorth" => protocol::Facing::South,
+                            "Worth" => protocol::Facing::West,
+                            _ => protocol::Facing::South,
+                        };
+                        
+                        // We don't have a position, so use a dummy position
+                        // This is just to update the facing direction
+                        let position = protocol::Position::new(0, 0);
+                        
+                        return Some(protocol::ServerToClient::PlayerMoved(
+                            username,
+                            position,
+                            facing,
+                        ));
+                    }
+                }
+            }
         } else {
             log::info!("Message does not contain player_moved, player_joined, or player_left");
         }
