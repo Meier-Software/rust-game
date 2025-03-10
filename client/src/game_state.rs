@@ -484,45 +484,64 @@ impl GameState {
         self.process_network_messages();
     }
 
-    // New method to process network messages for other players
+    // Method to process network messages for other players
     fn process_network_messages(&mut self) {
         // Only process messages if we're not in offline mode
         if self.nc.is_offline() {
             return;
         }
         
-        // Try to receive a message from the server
-        match self.nc.recv() {
-            Ok(message) => {
-                log::info!("Received message from server: {}", message);
-                
-                // Parse the message to see if it's a player update
-                if let Some(server_message) = self.nc.parse_server_message(&message) {
-                    match server_message {
-                        protocol::ServerToClient::PlayerJoined(username, position, facing) => {
-                            log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
-                            self.players.add_or_update_player(username, position, facing);
-                        },
-                        protocol::ServerToClient::PlayerLeft(username) => {
-                            log::info!("Player left: {}", username);
-                            self.players.remove_player(&username);
-                        },
-                        protocol::ServerToClient::PlayerMoved(username, position, facing) => {
-                            log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
-                            self.players.update_player_position(&username, position, facing);
-                        },
-                        _ => {
-                            // Handle other message types if needed
+        // Process all available messages in a loop
+        let mut message_count = 0;
+        let max_messages_per_frame = 10; // Limit to prevent infinite loops
+        
+        loop {
+            // Try to receive a message from the server
+            match self.nc.recv() {
+                Ok(message) => {
+                    message_count += 1;
+                    log::info!("Received message from server: {}", message);
+                    
+                    // Parse the message to see if it's a player update
+                    if let Some(server_message) = self.nc.parse_server_message(&message) {
+                        match server_message {
+                            protocol::ServerToClient::PlayerJoined(username, position, facing) => {
+                                log::info!("Player joined: {} at ({}, {})", username, position.x, position.y);
+                                self.players.add_or_update_player(username, position, facing);
+                            },
+                            protocol::ServerToClient::PlayerLeft(username) => {
+                                log::info!("Player left: {}", username);
+                                self.players.remove_player(&username);
+                            },
+                            protocol::ServerToClient::PlayerMoved(username, position, facing) => {
+                                log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
+                                self.players.update_player_position(&username, position, facing);
+                            },
+                            _ => {
+                                // Handle other message types if needed
+                            }
                         }
                     }
+                    
+                    // Break if we've processed too many messages to prevent infinite loops
+                    if message_count >= max_messages_per_frame {
+                        log::warn!("Processed maximum number of messages per frame ({})", max_messages_per_frame);
+                        break;
+                    }
+                },
+                Err(NCError::NoNewData) => {
+                    // No more data, break the loop
+                    break;
+                },
+                Err(e) => {
+                    log::warn!("Error receiving from server: {:?}", e);
+                    break;
                 }
-            },
-            Err(NCError::NoNewData) => {
-                // No new data, this is normal
-            },
-            Err(e) => {
-                log::warn!("Error receiving from server: {:?}", e);
             }
+        }
+        
+        if message_count > 0 {
+            log::info!("Processed {} network messages this frame", message_count);
         }
     }
 

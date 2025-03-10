@@ -36,7 +36,7 @@ defmodule Zone do
         
         # Broadcast to all players except the one who moved
         for {k, player_pid} <- player_list, k != username do
-          send(player_pid, {:client_send, "player_moved #{x} #{y} #{facing}"})
+          send(player_pid, {:client_send, "player_moved #{username} #{x} #{y} #{facing}"})
         end
         
         loop_zone(zone_data)
@@ -58,7 +58,7 @@ defmodule Zone do
         
         # Broadcast to all players except the one who joined
         for {k, player_pid} <- player_list, k != username do
-          send(player_pid, {:client_send, "player_joined #{x} #{y} #{facing}"})
+          send(player_pid, {:client_send, "player_joined #{username} #{x} #{y} #{facing}"})
         end
         
         loop_zone(zone_data)

@@ -138,81 +138,78 @@ impl NetClient {
     }
 
     pub fn parse_server_message(&self, message: &str) -> Option<protocol::ServerToClient> {
+        // Extract the username from the message if it contains "USR-"
+        let username_from_prefix = message.split_whitespace()
+            .find(|part| part.starts_with("USR-(") && part.ends_with("):"))
+            .map(|part| part.trim_start_matches("USR-(").trim_end_matches("):").to_string());
+        
         if message.contains("player_moved") {
             let parts: Vec<&str> = message.split_whitespace().collect();
             
-            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
-            if let Some(username_part) = username_part {
-                let username = username_part
-                    .trim_start_matches("USR-(")
-                    .trim_end_matches("):")
-                    .to_string();
-                
-                if parts.len() >= 4 {
-                    let pos_index = parts.iter().position(|&part| part == "player_moved").unwrap();
-                    if pos_index + 3 < parts.len() {
-                        if let (Ok(x), Ok(y)) = (parts[pos_index + 1].parse::<i32>(), parts[pos_index + 2].parse::<i32>()) {
-                            let facing_str = parts[pos_index + 3];
-                            let facing = match facing_str {
-                                "North" => protocol::Facing::North,
-                                "East" => protocol::Facing::East,
-                                "South" => protocol::Facing::South,
-                                "West" => protocol::Facing::West,
-                                _ => protocol::Facing::South,
-                            };
-                            
-                            return Some(protocol::ServerToClient::PlayerMoved(
-                                username,
-                                protocol::Position::new(x, y),
-                                facing,
-                            ));
-                        }
+            // Find the position of "player_moved" in the message
+            if let Some(pos_index) = parts.iter().position(|&part| part == "player_moved") {
+                // Check if we have enough parts after "player_moved"
+                if pos_index + 4 < parts.len() {
+                    // The format is now "player_moved username x y facing"
+                    let username = parts[pos_index + 1].to_string();
+                    
+                    if let (Ok(x), Ok(y)) = (parts[pos_index + 2].parse::<i32>(), parts[pos_index + 3].parse::<i32>()) {
+                        let facing_str = parts[pos_index + 4];
+                        let facing = match facing_str {
+                            "North" => protocol::Facing::North,
+                            "East" => protocol::Facing::East,
+                            "South" => protocol::Facing::South,
+                            "West" => protocol::Facing::West,
+                            _ => protocol::Facing::South,
+                        };
+                        
+                        return Some(protocol::ServerToClient::PlayerMoved(
+                            username,
+                            protocol::Position::new(x, y),
+                            facing,
+                        ));
                     }
                 }
             }
         } else if message.contains("player_joined") {
             let parts: Vec<&str> = message.split_whitespace().collect();
             
-            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
-            if let Some(username_part) = username_part {
-                let username = username_part
-                    .trim_start_matches("USR-(")
-                    .trim_end_matches("):")
-                    .to_string();
-                
-                if parts.len() >= 4 {
-                    let pos_index = parts.iter().position(|&part| part == "player_joined").unwrap();
-                    if pos_index + 3 < parts.len() {
-                        if let (Ok(x), Ok(y)) = (parts[pos_index + 1].parse::<i32>(), parts[pos_index + 2].parse::<i32>()) {
-                            let facing_str = parts[pos_index + 3];
-                            let facing = match facing_str {
-                                "North" => protocol::Facing::North,
-                                "East" => protocol::Facing::East,
-                                "South" => protocol::Facing::South,
-                                "West" => protocol::Facing::West,
-                                _ => protocol::Facing::South,
-                            };
-                            
-                            return Some(protocol::ServerToClient::PlayerJoined(
-                                username,
-                                protocol::Position::new(x, y),
-                                facing,
-                            ));
-                        }
+            // Find the position of "player_joined" in the message
+            if let Some(pos_index) = parts.iter().position(|&part| part == "player_joined") {
+                // Check if we have enough parts after "player_joined"
+                if pos_index + 4 < parts.len() {
+                    // The format is now "player_joined username x y facing"
+                    let username = parts[pos_index + 1].to_string();
+                    
+                    if let (Ok(x), Ok(y)) = (parts[pos_index + 2].parse::<i32>(), parts[pos_index + 3].parse::<i32>()) {
+                        let facing_str = parts[pos_index + 4];
+                        let facing = match facing_str {
+                            "North" => protocol::Facing::North,
+                            "East" => protocol::Facing::East,
+                            "South" => protocol::Facing::South,
+                            "West" => protocol::Facing::West,
+                            _ => protocol::Facing::South,
+                        };
+                        
+                        return Some(protocol::ServerToClient::PlayerJoined(
+                            username,
+                            protocol::Position::new(x, y),
+                            facing,
+                        ));
                     }
                 }
             }
         } else if message.contains("player_left") {
             let parts: Vec<&str> = message.split_whitespace().collect();
             
-            let username_part = parts.iter().find(|&&part| part.starts_with("USR-(") && part.ends_with("):"));
-            if let Some(username_part) = username_part {
-                let username = username_part
-                    .trim_start_matches("USR-(")
-                    .trim_end_matches("):")
-                    .to_string();
-                
-                return Some(protocol::ServerToClient::PlayerLeft(username));
+            // Find the position of "player_left" in the message
+            if let Some(pos_index) = parts.iter().position(|&part| part == "player_left") {
+                // Check if we have enough parts after "player_left"
+                if pos_index + 1 < parts.len() {
+                    // The format is "player_left username"
+                    let username = parts[pos_index + 1].to_string();
+                    return Some(protocol::ServerToClient::PlayerLeft(username));
+                }
             }
         }
         
