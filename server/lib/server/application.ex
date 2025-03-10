@@ -16,7 +16,7 @@ defmodule Server.Application do
 
       # Starts a worker by calling: Server.Worker.start_link(arg)
       # {Server.Worker, arg}
-      Supervisor.child_spec({Task, fn -> Server.start() end}, restart: :permanent)
+      Supervisor.child_spec({Task, fn -> Server.start() end}, restart: :temporary)
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

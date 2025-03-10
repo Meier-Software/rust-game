@@ -7,7 +7,7 @@ defmodule Client.Authed do
 
     # TODO: Only actually go through this when auth starts
     {:ok, player_pid} =
-      Task.Supervisor.start_child(Server.Clients, fn -> Player.start(client_pid, username) end)
+      Task.Supervisor.start_child(Server.Players, fn -> Player.start(client_pid, username) end)
 
     write_line("Logged in", client_socket)
     loop_client(client_socket, username, player_pid)

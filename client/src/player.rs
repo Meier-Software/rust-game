@@ -3,16 +3,15 @@ use ggez::{
     graphics::{self, Drawable},
 };
 use protocol::{Facing, Position};
-
 use crate::{
     assets::AssetManager,
     input::{MovementState, PLAYER_SIZE},
     map::Map,
 };
 // Animation constants
-const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
+// const ANIMATION_FRAME_TIME: f32 = 0.15; // Slightly slower animation for better visibility
 const MAX_FRAMES: usize = 4; // Knight has 4 animation frames
-const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
+// const IDLE_ANIMATION_DELAY: f32 = 10.0; // Seconds before switching to idle animation
 const ANIMATION_SPEED: f32 = 5.0;
 const IDLE_ANIMATION_SPEED: f32 = 2.0;
 
