@@ -77,6 +77,21 @@ impl Room {
 
 impl Map {
     pub fn new() -> Self {
+        // Try to load the large room map first
+        let large_room_path = "client/assets/large_room_map.json";
+        
+        if Path::new(large_room_path).exists() {
+            match Self::from_json(large_room_path) {
+                Ok(map) => {
+                    println!("Loaded large room map from {}", large_room_path);
+                    return map;
+                },
+                Err(e) => {
+                    println!("Failed to load large room map from {}: {}", large_room_path, e);
+                }
+            }
+        }
+        
         // Try to load the default map from JSON
         let default_path = "client/assets/default_map.json";
         

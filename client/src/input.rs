@@ -1,6 +1,5 @@
 use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
-use protocol::Facing;
 
 // Game constants
 pub const MOVEMENT_SPEED: i32 = 1;
