@@ -130,7 +130,7 @@ impl GameState {
 
         // Create player at starting position
         let start_pos = Position::new((GRID_SIZE as f32 * 1.5) as i32, (GRID_SIZE as f32 * 1.5) as i32);
-        log::info!("Creating player at starting position: ({}, {})", start_pos.x, start_pos.y);
+        log::trace!("Creating player at starting position: ({}, {})", start_pos.x, start_pos.y);
         let players = Players::new("Player".to_string(), start_pos);
 
         Self {
@@ -165,7 +165,7 @@ impl GameState {
             character, character, gender
         );
         
-        log::info!("Loading character assets for {} from path: {}", character, character_path);
+        log::trace!("Loading character assets for {} from path: {}", character, character_path);
 
         // Load idle animations
         let idle_down_path = format!(
@@ -176,7 +176,7 @@ impl GameState {
             character.to_lowercase(),
             gender.to_lowercase()
         );
-        log::info!("Loading idle down animation from: {}", idle_down_path);
+        log::trace!("Loading idle down animation from: {}", idle_down_path);
         
         // Special handling for Archer to ensure assets are loaded correctly
         let load_result = asset_manager.load_asset(
@@ -212,7 +212,7 @@ impl GameState {
             character.to_lowercase(),
             gender.to_lowercase()
         );
-        log::info!("Loading idle up animation from: {}", idle_up_path);
+        log::trace!("Loading idle up animation from: {}", idle_up_path);
         
         // Special handling for Archer to ensure assets are loaded correctly
         let load_result = asset_manager.load_asset(
@@ -248,7 +248,7 @@ impl GameState {
             character.to_lowercase(),
             gender.to_lowercase()
         );
-        log::info!("Loading idle right animation from: {}", idle_right_path);
+        log::trace!("Loading idle right animation from: {}", idle_right_path);
         
         // Special handling for Archer to ensure assets are loaded correctly
         let load_result = asset_manager.load_asset(
@@ -584,7 +584,7 @@ impl GameState {
                     
                     // Set the player's name to the username used for login
                     self.players.self_player.name = self.username.clone();
-                    log::info!("Set player name to: {}", self.username);
+                    log::trace!("Set player name to: {}", self.username);
                     
                     // Send the username to the server for identification
                     let username_msg = format!("username {}\r\n", self.username);
@@ -801,7 +801,7 @@ impl GameState {
         let _ = self.nc.send_str(move_msg);
         
         // Log the position being sent
-        log::info!("Sending absolute position: ({}, {})", 
+        log::trace!("Sending absolute position: ({}, {})", 
             self.players.self_player.pos.x, 
             self.players.self_player.pos.y
         );
@@ -830,7 +830,7 @@ impl GameState {
                     }
                     
                     // Log raw messages for debugging
-                    log::info!("Raw server message: {}", message);
+                    log::trace!("Raw server message: {}", message);
                     
                     // Parse the message to see if it's a player update
                     if let Some(server_message) = self.nc.parse_server_message(&message) {
@@ -858,14 +858,14 @@ impl GameState {
                             protocol::ServerToClient::PlayerMoved(username, position, facing) => {
                                 // Skip if this is our own username
                                 if username == self.username {
-                                    log::info!("Skipping own player moved message: {}", username);
+                                    log::trace!("Skipping own player moved message: {}", username);
                                     continue;
                                 }
                                 
                                 // Only log position updates if the position is not (0,0)
                                 // This is to avoid logging facing-only updates
                                 if position.x != 0 || position.y != 0 {
-                                    log::info!("Player moved: {} to ({}, {})", username, position.x, position.y);
+                                    log::trace!("Player moved: {} to ({}, {})", username, position.x, position.y);
                                 }
                                 
                                 // Update the player's position and facing
@@ -884,7 +884,7 @@ impl GameState {
                     } else if message.contains("player_joined") || message.contains("player_moved") {
                         // Try to extract the username and position manually
                         let parts: Vec<&str> = message.split_whitespace().collect();
-                        log::info!("Message parts: {:?}", parts);
+                        log::trace!("Message parts: {:?}", parts);
                         
                         if parts.len() >= 5 {
                             if let Some(pos) = parts.iter().position(|&p| p == "player_joined" || p == "player_moved") {
@@ -905,23 +905,19 @@ impl GameState {
                                             "East" => protocol::Facing::East,
                                             "South" => protocol::Facing::South,
                                             "West" => protocol::Facing::West,
-                                            // Handle the typo cases until the server is fixed
-                                            "Eorth" => protocol::Facing::East,
-                                            "Sorth" => protocol::Facing::South,
-                                            "Worth" => protocol::Facing::West,
                                             _ => protocol::Facing::South,
                                         };
                                         
                                         let position = protocol::Position::new(x, y);
                                         
                                         if cmd == "player_joined" {
-                                            log::info!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
+                                            log::trace!("Manual parse - Player joined: {} at ({}, {})", username, x, y);
                                             self.players.add_or_update_player(username, position, facing);
                                             
                                             // Debug print all players
                                             self.players.debug_print_players();
                                         } else {
-                                            log::info!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
+                                            log::trace!("Manual parse - Player moved: {} to ({}, {})", username, x, y);
                                             self.players.update_player_position(&username, position, facing);
                                         }
                                     }

@@ -39,8 +39,8 @@ defmodule Client.Authed do
         "Attempting to heal for #{value}."
 
       # BUG: This does not preserve spaces in echo when it probably should.
-      ["echo" | rest] ->
-        Logger.info("#{rest}")
+      ["echo", rest] ->
+        Logger.info("#{inspect(rest)}")
         "#{rest}"
 
       ["move", x, y] ->
@@ -56,18 +56,18 @@ defmodule Client.Authed do
         "Facing " <> dir
 
       ["username", username] ->
-        Logger.info("Client identified as username: #{username}")
+        # Logger.info("Client identified as username: #{username}")
         send(player_pid, {:set_username, username, self()})
         "Username set to " <> username
 
-      ["chat", message | rest] ->
+      ["chat", message] ->
         # Combine all parts of the message
-        full_message = Enum.join([message | rest], " ")
+        full_message = Enum.join([message], " ")
         Logger.info("Chat message from #{username}: #{full_message}")
-        
+
         # Send the chat message to the zone manager to broadcast to all players
         send(:zone_manager, {:broadcast, "chat_message #{username} #{full_message}"})
-        
+
         # Return a confirmation
         "Chat message sent"
 
@@ -96,7 +96,7 @@ defmodule Client.Authed do
 
     receive do
       {:client_send, line} ->
-        Logger.info("Recieved a :client_send event")
+        # Logger.info("Recieved a :client_send event")
         write_line(line, client_socket)
         loop_client(client_socket, auth, player_pid)
 

@@ -44,7 +44,7 @@ defmodule Player do
         {:ok, x} = Map.fetch(info, :x)
         {:ok, y} = Map.fetch(info, :y)
         {:ok, facing} = Map.fetch(info, :facing)
-        
+
         # Send position info back to the requester
         send(pid, {:position_info, x, y, facing})
         loop_player(client_pid, stats, info)
@@ -52,21 +52,21 @@ defmodule Player do
       {:facing, dir, pid} ->
         send(pid, {:faced, dir})
         info = Map.put(info, :facing, dir)
-        
+
         # Get the username
         {:ok, username} = Map.fetch(info, :username)
-        
+
         # Get current position
         {:ok, x} = Map.fetch(info, :x)
         {:ok, y} = Map.fetch(info, :y)
-        
+
         # Broadcast the facing change to all players in the zone
         send(:zone_manager, {:player_moved, username, x, y, dir})
 
         loop_player(client_pid, stats, info)
-        
+
       {:set_username, username, pid} ->
-        Logger.info("Player joined: #{username}")
+        # Logger.info("Player joined: #{username}")
         info = Map.put(info, :username, username)
         send(pid, {:client_send, "Username set to #{username}"})
         loop_player(client_pid, stats, info)
@@ -79,13 +79,13 @@ defmodule Player do
         # Update position - treat x and y as absolute positions, not deltas
         info = Map.put(info, :x, x_delta)
         info = Map.put(info, :y, y_delta)
-        
+
         # Get the current facing direction
         {:ok, facing} = Map.fetch(info, :facing)
-        
+
         # Get the username
         {:ok, username} = Map.fetch(info, :username)
-        
+
         # Broadcast the movement to all players in the zone
         send(:zone_manager, {:player_moved, username, x_delta, y_delta, facing})
 

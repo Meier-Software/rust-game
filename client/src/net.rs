@@ -143,21 +143,21 @@ impl NetClient {
             .find(|part| part.starts_with("USR-(") && part.ends_with("):"))
             .map(|part| part.trim_start_matches("USR-(").trim_end_matches("):").to_string());
         
-        log::info!("Parsing server message: {}", message);
+        log::trace!("Parsing server message: {}", message);
         
         if message.contains("player_moved") {
             let parts: Vec<&str> = message.split_whitespace().collect();
-            log::info!("Message parts: {:?}", parts);
+            log::trace!("Message parts: {:?}", parts);
             
             // Find the position of "player_moved" in the message
             if let Some(pos_index) = parts.iter().position(|&part| part == "player_moved") {
-                log::info!("Found player_moved at position {}", pos_index);
+                log::trace!("Found player_moved at position {}", pos_index);
                 
                 // Check if we have enough parts after "player_moved"
                 if pos_index + 4 < parts.len() {
                     // The format is now "player_moved username x y facing"
                     let username = parts[pos_index + 1].to_string();
-                    log::info!("Username from message: {}", username);
+                    log::trace!("Username from message: {}", username);
                     
                     if let (Ok(x), Ok(y)) = (parts[pos_index + 2].parse::<i32>(), parts[pos_index + 3].parse::<i32>()) {
                         let facing_str = parts[pos_index + 4];
@@ -169,7 +169,7 @@ impl NetClient {
                             _ => protocol::Facing::South,
                         };
                         
-                        log::info!("Successfully parsed player_moved message for {}: ({}, {}) facing {:?}", 
+                        log::trace!("Successfully parsed player_moved message for {}: ({}, {}) facing {:?}", 
                                   username, x, y, facing);
                         
                         return Some(protocol::ServerToClient::PlayerMoved(
@@ -189,17 +189,17 @@ impl NetClient {
         } else if message.contains("player_joined") {
             // Similar logging for player_joined
             let parts: Vec<&str> = message.split_whitespace().collect();
-            log::info!("Message parts: {:?}", parts);
+            log::trace!("Message parts: {:?}", parts);
             
             // Find the position of "player_joined" in the message
             if let Some(pos_index) = parts.iter().position(|&part| part == "player_joined") {
-                log::info!("Found player_joined at position {}", pos_index);
+                log::trace!("Found player_joined at position {}", pos_index);
                 
                 // Check if we have enough parts after "player_joined"
                 if pos_index + 4 < parts.len() {
                     // The format is now "player_joined username x y facing"
                     let username = parts[pos_index + 1].to_string();
-                    log::info!("Username from message: {}", username);
+                    log::trace!("Username from message: {}", username);
                     
                     if let (Ok(x), Ok(y)) = (parts[pos_index + 2].parse::<i32>(), parts[pos_index + 3].parse::<i32>()) {
                         let facing_str = parts[pos_index + 4];
@@ -211,7 +211,7 @@ impl NetClient {
                             _ => protocol::Facing::South,
                         };
                         
-                        log::info!("Successfully parsed player_joined message for {}: ({}, {}) facing {:?}", 
+                        log::trace!("Successfully parsed player_joined message for {}: ({}, {}) facing {:?}", 
                                   username, x, y, facing);
                         
                         return Some(protocol::ServerToClient::PlayerJoined(
@@ -231,19 +231,19 @@ impl NetClient {
         } else if message.contains("player_left") {
             // Similar logging for player_left
             let parts: Vec<&str> = message.split_whitespace().collect();
-            log::info!("Message parts: {:?}", parts);
+            log::trace!("Message parts: {:?}", parts);
             
             // Find the position of "player_left" in the message
             if let Some(pos_index) = parts.iter().position(|&part| part == "player_left") {
-                log::info!("Found player_left at position {}", pos_index);
+                log::trace!("Found player_left at position {}", pos_index);
                 
                 // Check if we have enough parts after "player_left"
                 if pos_index + 1 < parts.len() {
                     // The format is "player_left username"
                     let username = parts[pos_index + 1].to_string();
-                    log::info!("Username from message: {}", username);
+                    log::trace!("Username from message: {}", username);
                     
-                    log::info!("Successfully parsed player_left message for {}", username);
+                    log::trace!("Successfully parsed player_left message for {}", username);
                     return Some(protocol::ServerToClient::PlayerLeft(username));
                 } else {
                     log::warn!("Not enough parts after player_left in message");
@@ -273,10 +273,6 @@ impl NetClient {
                             "East" => protocol::Facing::East,
                             "South" => protocol::Facing::South,
                             "West" => protocol::Facing::West,
-                            // Handle the typo cases until the server is fixed
-                            "Eorth" => protocol::Facing::East,
-                            "Sorth" => protocol::Facing::South,
-                            "Worth" => protocol::Facing::West,
                             _ => protocol::Facing::South,
                         };
                         
