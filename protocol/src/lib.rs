@@ -1,4 +1,11 @@
 #[derive(Debug, Copy, Clone)]
+pub enum ProtocolError{
+
+}
+
+
+
+#[derive(Debug, Copy, Clone)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -16,14 +23,16 @@ pub enum Facing {
     West,
 }
 
-impl Facing {
-    pub fn from_str(stri: &str) -> Self {
-        match stri {
-            "North" => Self::North,
-            "East" => Self::East,
-            "South" => Self::South,
-            "West" => Self::West,
-            _ => Self::South,
+impl std::str::FromStr for Facing {
+    type Err = ProtocolError;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "North" => Ok(Self::North),
+            "East" => Ok(Self::East),
+            "South" => Ok(Self::South),
+            "West" => Ok(Self::West),
+            _ => Ok(Self::South),
         }
     }
 }

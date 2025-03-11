@@ -15,7 +15,6 @@ defmodule Server.Application do
       {Task.Supervisor, name: Server.Players},
       {Task.Supervisor, name: Server.Zones},
 
-
       # Starts a worker by calling: Server.Worker.start_link(arg)
       # {Server.Worker, arg}
       Supervisor.child_spec({Task, fn -> Server.start() end}, restart: :temporary)

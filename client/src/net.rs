@@ -1,6 +1,6 @@
 use std::{
     io::{Read, Write},
-    net::TcpStream,
+    net::TcpStream, str::FromStr,
 };
 
 use protocol::ClientToServer;
@@ -181,7 +181,7 @@ impl NetClient {
                         parts[pos_index + 3].parse::<i32>(),
                     ) {
                         let facing_str = parts[pos_index + 4];
-                        let facing = protocol::Facing::from_str(facing_str);
+                        let facing = protocol::Facing::from_str(facing_str).expect("invalid direction");
 
                         log::trace!(
                             "Successfully parsed player_moved message for {}: ({}, {}) facing {:?}",
@@ -225,7 +225,7 @@ impl NetClient {
                         parts[pos_index + 3].parse::<i32>(),
                     ) {
                         let facing_str = parts[pos_index + 4];
-                        let facing = protocol::Facing::from_str(facing_str);
+                        let facing = protocol::Facing::from_str(facing_str).expect("invalid direction");
 
                         log::trace!(
                             "Successfully parsed player_joined message for {}: ({}, {}) facing {:?}",
@@ -291,7 +291,7 @@ impl NetClient {
                 if let Some(facing_index) = parts.iter().position(|&part| part == "Facing") {
                     if facing_index + 1 < parts.len() {
                         let facing_str = parts[facing_index + 1];
-                        let facing = protocol::Facing::from_str(facing_str);
+                        let facing = protocol::Facing::from_str(facing_str).expect("invalid direction");
 
                         // We don't have a position, so use a dummy position
                         // This is just to update the facing direction

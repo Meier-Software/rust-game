@@ -4,18 +4,25 @@ defmodule Db.DbApi do
   """
 
   def get_player(username) do
-    send(:database, {:get, :player, username, self()})
+    # Cap the username at 16 characters
+    if String.length(username) <= 16 do
+      send(:database, {:get, :player, username, self()})
 
-    receive do
-      {:player, value} -> {:player, value}
+      receive do
+        {:player, value} -> {:player, value}
+      end
+    else
+      {:player, false}
     end
   end
 
   def new_player(username, password) do
-    send(:database, {:new, :player, username, password, self()})
+    if String.length(username) <= 16 do
+      send(:database, {:new, :player, username, password, self()})
 
-    receive do
-      {:player, value} -> {:player, value}
+      receive do
+        {:player, value} -> {:player, value}
+      end
     end
   end
 
