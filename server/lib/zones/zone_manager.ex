@@ -7,7 +7,7 @@ defmodule ZoneManager do
     Logger.info("Zone Manager alias registered.")
 
     {:ok, hub_pid} =
-      Task.Supervisor.start_child(Server.Services.ZoneManager, fn -> Zone.start("hub") end)
+      Task.Supervisor.start_child(Server.Zones, fn -> Zone.start("hub") end)
 
     zones = %{"hub" => hub_pid}
 
@@ -32,7 +32,7 @@ defmodule ZoneManager do
 
       {:new_zone, zone_name} ->
         {:ok, zone_pid} =
-          Task.Supervisor.start_child(Server.Services.ZoneManager, fn -> Zone.start(zone_name) end)
+          Task.Supervisor.start_child(Server.Zones, fn -> Zone.start(zone_name) end)
 
         zones = Map.put(zones, zone_name, zone_pid)
         loop_manager(zones)

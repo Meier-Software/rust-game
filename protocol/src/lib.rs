@@ -3,7 +3,12 @@ pub enum ProtocolError{
 
 }
 
-
+// This is a teleportation link to be used by doors. hub@x20y30
+pub struct ZoneLink {
+    // A slash seperated list.
+    pub zone: String,
+    pub pos: Position,
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -53,6 +58,7 @@ impl std::fmt::Display for Facing {
 #[derive(Debug)]
 pub enum ServerToClient {
     EntityMoved(Position),
+    // TODO: Remove pos and facing from here and move it to the above
     PlayerJoined(String, Position, Facing),
     PlayerLeft(String),
     PlayerMoved(String, Position, Facing),
