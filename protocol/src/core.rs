@@ -53,9 +53,25 @@ fn worth_sorth_sanity_check() {
 
     let no = Facing::from_str("Worth");
     match no {
-        Ok(ok) => panic!("Should have failed."),
+        Ok(_) => panic!("Should have failed."),
         Err(err) => {
             assert_eq!(err, ProtocolError::InvalidFacingDirection)
+        }
+    }
+}
+
+
+
+#[test]
+fn north_sanity_check() {
+    use std::str::FromStr;
+
+    let no = Facing::from_str("North");
+    match no {
+        Ok(facing) => 
+        assert_eq!(facing, Facing::North),
+        Err(_) => {
+            panic!("Should have failed.");
         }
     }
 }
