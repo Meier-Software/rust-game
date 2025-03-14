@@ -75,6 +75,7 @@ pub enum ClientToServer {
     ChatMessage(String),
     SetUsername(String),
     SetPosition(i32, i32),
+    Command(Vec<String>)
 }
 
 impl ClientToServer {
@@ -89,6 +90,14 @@ impl ClientToServer {
             ChatMessage(message) => format!("chat {}\r\n", message),
             SetUsername(username) => format!("username {}\r\n", username),
             SetPosition(x, y) => format!("pos {} {}\r\n", x, y),
+            Command(items) => {
+                let mut stri = String::new();
+                for x in items{
+                    stri.push_str(x.as_str());
+            };
+
+            format!("{}", stri)
+        }
         }
     }
 }
