@@ -1,5 +1,6 @@
 use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
+use protocol::Position;
 
 // Game constants
 pub const MOVEMENT_SPEED: i32 = 1;
@@ -86,7 +87,9 @@ pub fn send_movement_to_server(
     // Only send movement if actually moving
     if movement.is_moving {
         // Send absolute position instead of relative movement
-        let move_msg = format!("pos {} {}\r\n", player_pos.x, player_pos.y);
-        let _ = nc.send_str(move_msg);
+        let pos = Position::new(player_pos.x, player_pos.y);
+        let pos_event = protocol::ClientToServer::AttemptPlayerMove(pos);
+
+        let _ = nc.send(pos_event);
     }
 }

@@ -1,7 +1,5 @@
 #[derive(Debug, Copy, Clone)]
-pub enum ProtocolError{
-
-}
+pub enum ProtocolError {}
 
 // This is a teleportation link to be used by doors. hub@x20y30
 pub struct ZoneLink {
@@ -30,7 +28,7 @@ pub enum Facing {
 
 impl std::str::FromStr for Facing {
     type Err = ProtocolError;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "North" => Ok(Self::North),
