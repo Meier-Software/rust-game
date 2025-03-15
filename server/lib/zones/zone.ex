@@ -95,7 +95,7 @@ defmodule Zone do
         # Logger.info("Broadcasting message to all players: #{line}")
 
         for {k, player_pid} <- player_list do
-          # Logger.info("Broadcasting to player #{k}")
+          Logger.info("Broadcasting to player #{k}")
           send(player_pid, {:client_send, line})
         end
 

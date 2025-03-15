@@ -744,6 +744,18 @@ impl GameState {
         }
     }
 
+    pub fn handle_text_input(
+        &mut self,
+        ctx: &mut Context,
+        character: char,
+    ) -> Result<(), ggez::GameError> {
+        if self.is_chatting {
+            self.chat_input.push(character);
+            self.handle_chat_input(ctx);
+        }
+        Ok(())
+    }
+
     fn update_in_game(&mut self, ctx: &Context) {
         // Check for chat toggle with tilde key
         if ctx.keyboard.is_key_just_pressed(KeyCode::Grave) {
@@ -1644,117 +1656,6 @@ impl GameState {
         // Handle backspace
         if ctx.keyboard.is_key_just_pressed(KeyCode::Back) && !self.chat_input.is_empty() {
             self.chat_input.pop();
-        }
-
-        // Handle text input
-        for key in [
-            KeyCode::A,
-            KeyCode::B,
-            KeyCode::C,
-            KeyCode::D,
-            KeyCode::E,
-            KeyCode::F,
-            KeyCode::G,
-            KeyCode::H,
-            KeyCode::I,
-            KeyCode::J,
-            KeyCode::K,
-            KeyCode::L,
-            KeyCode::M,
-            KeyCode::N,
-            KeyCode::O,
-            KeyCode::P,
-            KeyCode::Q,
-            KeyCode::R,
-            KeyCode::S,
-            KeyCode::T,
-            KeyCode::U,
-            KeyCode::V,
-            KeyCode::W,
-            KeyCode::X,
-            KeyCode::Y,
-            KeyCode::Z,
-            KeyCode::Key1,
-            KeyCode::Key2,
-            KeyCode::Key3,
-            KeyCode::Key4,
-            KeyCode::Key5,
-            KeyCode::Key6,
-            KeyCode::Key7,
-            KeyCode::Key8,
-            KeyCode::Key9,
-            KeyCode::Key0,
-            KeyCode::Underline,
-            KeyCode::Space,
-            KeyCode::Comma,
-            KeyCode::Period,
-            KeyCode::Slash,
-            KeyCode::Semicolon,
-            KeyCode::Apostrophe,
-            KeyCode::LBracket,
-            KeyCode::RBracket,
-            KeyCode::Backslash,
-            KeyCode::Minus,
-            KeyCode::Equals,
-        ]
-        .iter()
-        {
-            if ctx.keyboard.is_key_just_pressed(*key) {
-                let char_to_add = match key {
-                    KeyCode::A => 'a',
-                    KeyCode::B => 'b',
-                    KeyCode::C => 'c',
-                    KeyCode::D => 'd',
-                    KeyCode::E => 'e',
-                    KeyCode::F => 'f',
-                    KeyCode::G => 'g',
-                    KeyCode::H => 'h',
-                    KeyCode::I => 'i',
-                    KeyCode::J => 'j',
-                    KeyCode::K => 'k',
-                    KeyCode::L => 'l',
-                    KeyCode::M => 'm',
-                    KeyCode::N => 'n',
-                    KeyCode::O => 'o',
-                    KeyCode::P => 'p',
-                    KeyCode::Q => 'q',
-                    KeyCode::R => 'r',
-                    KeyCode::S => 's',
-                    KeyCode::T => 't',
-                    KeyCode::U => 'u',
-                    KeyCode::V => 'v',
-                    KeyCode::W => 'w',
-                    KeyCode::X => 'x',
-                    KeyCode::Y => 'y',
-                    KeyCode::Z => 'z',
-                    KeyCode::Key1 => '1',
-                    KeyCode::Key2 => '2',
-                    KeyCode::Key3 => '3',
-                    KeyCode::Key4 => '4',
-                    KeyCode::Key5 => '5',
-                    KeyCode::Key6 => '6',
-                    KeyCode::Key7 => '7',
-                    KeyCode::Key8 => '8',
-                    KeyCode::Key9 => '9',
-                    KeyCode::Key0 => '0',
-                    KeyCode::Space => ' ',
-                    KeyCode::Comma => ',',
-                    KeyCode::Period => '.',
-                    KeyCode::Slash => '/',
-                    KeyCode::Semicolon => ';',
-                    KeyCode::Apostrophe => '\'',
-                    KeyCode::LBracket => '[',
-                    KeyCode::RBracket => ']',
-                    KeyCode::Backslash => '\\',
-                    KeyCode::Minus => '-',
-                    KeyCode::Equals => '=',
-                    KeyCode::Underline => '_',
-                    _ => continue,
-                };
-
-                // Add the character to the chat input
-                self.chat_input.push(char_to_add);
-            }
         }
     }
 }
