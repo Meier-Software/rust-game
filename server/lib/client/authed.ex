@@ -109,17 +109,17 @@ defmodule Client.Authed do
         loop_client(client_socket, auth, player_pid)
     after
       0 ->
-        line = read_line(client_socket)
+        line = read_line(client_socket, player_pid)
         line = process_line(line, client_socket, auth, player_pid)
         # TODO: Evaluate if this is really needed and most likely remove it.
-        line = "USR-(#{auth}): " <> line
-        write_line(line, client_socket)
+        # line = "USR-(#{auth}): " <> line
+        # write_line(line, client_socket)
 
         loop_client(client_socket, auth, player_pid)
     end
   end
 
-  defp read_line(client_socket) do
+  defp read_line(client_socket, player_pid) do
     # TODO Handle all cases to prevent a needless client death.
     case :gen_tcp.recv(client_socket, 0) do
       {:ok, data} ->
@@ -128,12 +128,14 @@ defmodule Client.Authed do
       {:error, :closed} ->
         # TODO Error handle a broken tcp connection
         Logger.info("Player disconnected from the game.")
+
+        Process.exit(player_pid, "quit.")
         Process.exit(self(), "Player left.")
     end
   end
 
   defp write_line(line, client_socket) do
-    line = "SRV: " <> line <> "\n\r"
+    line = "SRV: " <> line <> "\r\n"
     :gen_tcp.send(client_socket, line)
   end
 

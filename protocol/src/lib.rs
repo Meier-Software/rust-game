@@ -1,6 +1,6 @@
 #[derive(Debug, Copy, Clone)]
-pub enum ProtocolError{
-
+pub enum ProtocolError {
+    ServerLineUnparsable,
 }
 
 // This is a teleportation link to be used by doors. hub@x20y30
@@ -30,7 +30,7 @@ pub enum Facing {
 
 impl std::str::FromStr for Facing {
     type Err = ProtocolError;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "North" => Ok(Self::North),
@@ -65,6 +65,36 @@ pub enum ServerToClient {
     ChatMessage(String, String),
 }
 
+impl std::str::FromStr for ServerToClient {
+    type Err = ProtocolError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut msg = s.split(" ");
+        let srv_conf = msg.next().unwrap();
+        // let user_msg = msg.next().unwrap();
+
+        let cmd = msg.next().unwrap();
+        match cmd {
+            "chat" => {
+                let username: &str = msg.next().unwrap();
+                let mut rest = String::new();
+                for word in msg {
+                    rest.push_str(&format!(" {}", word));
+                }
+
+                Ok(Self::ChatMessage(username.to_string(), rest))
+            }
+            "Facing" => Err(ProtocolError::ServerLineUnparsable),
+            "Username" => Err(ProtocolError::ServerLineUnparsable),
+
+            err => {
+                log::error!("{}", err);
+
+                Err(ProtocolError::ServerLineUnparsable)
+            }
+        }
+    }
+}
 #[derive(Debug)]
 pub enum ClientToServer {
     AttemptPlayerMove(Position),

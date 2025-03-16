@@ -967,7 +967,8 @@ impl GameState {
                                         parts[pos + 3].parse::<i32>(),
                                     ) {
                                         let facing_str = parts[pos + 4];
-                                        let facing = protocol::Facing::from_str(facing_str).expect("string not valid");
+                                        let facing = protocol::Facing::from_str(facing_str)
+                                            .expect("string not valid");
 
                                         let position = protocol::Position::new(x, y);
 
