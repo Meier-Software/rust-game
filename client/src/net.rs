@@ -49,10 +49,10 @@ impl NetClient {
             };
         }
 
-        let addr = "game.ablecorp.us:45250";
-        let stream = match TcpStream::connect(addr) {
+        let addr = std::env::var("GAME_HOSTNAME_PORT").unwrap_or("game.ablecorp.us:45250".to_owned());
+        let stream = match TcpStream::connect(&addr) {
             Ok(stream) => {
-                log::info!("Connected to server at {}", addr);
+                log::info!("Connected to server at {}", &addr);
                 if let Err(err) = stream.set_nonblocking(true) {
                     log::error!("Failed to set nonblocking mode: {}", err);
                 }

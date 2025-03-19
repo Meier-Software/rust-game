@@ -9,4 +9,14 @@ defmodule ServerTest do
         assert b == "abc"
     end
   end
+
+  test "player move test" do
+    # Arguably this is property based testing.
+    username = "test-guy-" <> inspect(:rand.uniform(10))
+
+    {:ok, player_id} = Task.start(fn -> Player.start(self(), username) end)
+    send(player_id, {:move, 10, 10, self()})
+
+    # TODO: Recieve the event sent back.
+  end
 end

@@ -103,7 +103,7 @@ defmodule Client.Authed do
         loop_client(client_socket, auth, player_pid)
 
       {:stats, stats} ->
-        # Logger.info("stats #{inspect(stats)}")
+        Logger.info("stats #{inspect(stats)}")
         line = "stats collected."
         write_line(line, client_socket)
         loop_client(client_socket, auth, player_pid)

@@ -26,6 +26,12 @@ defmodule Db.DbApi do
     end
   end
 
+  def delete_user(username) do
+    {:player, :deleted}
+  end
+
+
+
   def login(username, password) do
     send(:database, {:login, :player, username, password, self()})
 
