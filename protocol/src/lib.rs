@@ -1,15 +1,11 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum ProtocolError {
     ServerLineUnparsable,
+    InvalidFormat(String),
 }
 pub mod zones;
+use zones::ZoneLink;
 
-// This is a teleportation link to be used by doors. hub@x20y30
-pub struct ZoneLink {
-    // A slash seperated list.
-    pub zone: String,
-    pub pos: Position,
-}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -106,6 +102,8 @@ pub enum ClientToServer {
     ChatMessage(String),
     SetUsername(String),
     SetPosition(i32, i32),
+
+    Goto(ZoneLink),
 }
 
 impl ClientToServer {
@@ -120,6 +118,7 @@ impl ClientToServer {
             ChatMessage(message) => format!("chat {}\r\n", message),
             SetUsername(username) => format!("username {}\r\n", username),
             SetPosition(x, y) => format!("pos {} {}\r\n", x, y),
+            Goto(link) => format!("goto {}\r\n", link),
         }
     }
 }
