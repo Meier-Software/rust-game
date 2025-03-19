@@ -2,6 +2,7 @@
 pub enum ProtocolError {
     ServerLineUnparsable,
 }
+pub mod zones;
 
 // This is a teleportation link to be used by doors. hub@x20y30
 pub struct ZoneLink {
