@@ -9,7 +9,13 @@ defmodule Zone do
         # Name, PID
       }
 
-    zone_data = %{:zonename => "#{name}", :playerlist => player_list}
+    entity_list = []  # List of entity PIDs
+
+    zone_data = %{
+      :zonename => "#{name}",
+      :playerlist => player_list,
+      :entitylist => entity_list
+    }
 
     loop_zone(zone_data)
   end
