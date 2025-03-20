@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::net::NetClient;
 use ggez::{Context, input::keyboard::KeyCode};
 use protocol::Position;
@@ -77,12 +79,12 @@ pub fn send_movement_to_server(
     player_pos: &protocol::Position,
 ) {
     // Always send the username for identification
-    let username_msg = format!("username {}\r\n", username);
-    let _ = nc.send_str(username_msg);
+    let _ = nc.send(protocol::ClientToServer::SetUsername(username.to_string()));
 
     // Send facing direction to server regardless of movement
     let facing_msg = format!("face {}\r\n", movement.direction);
-    let _ = nc.send_str(facing_msg);
+    let facing = protocol::Facing::from_str(&facing_msg).unwrap();
+    let _ = nc.send(protocol::ClientToServer::AttemptPlayerFacingChange(facing));
 
     // Only send movement if actually moving
     if movement.is_moving {

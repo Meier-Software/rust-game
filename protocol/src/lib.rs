@@ -122,3 +122,79 @@ impl ClientToServer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_position_creation() {
+        let pos = Position::new(10, -5);
+        assert_eq!(pos.x, 10);
+        assert_eq!(pos.y, -5);
+    }
+
+    #[test]
+    fn test_facing_from_str() {
+        assert_eq!("North".parse::<Facing>().unwrap(), Facing::North);
+        assert_eq!("East".parse::<Facing>().unwrap(), Facing::East);
+        assert_eq!("South".parse::<Facing>().unwrap(), Facing::South);
+        assert_eq!("West".parse::<Facing>().unwrap(), Facing::West);
+        // Test default case
+        assert_eq!("Invalid".parse::<Facing>().unwrap(), Facing::South);
+    }
+
+    #[test]
+    fn test_facing_display() {
+        assert_eq!(Facing::North.to_string(), "North");
+        assert_eq!(Facing::East.to_string(), "East");
+        assert_eq!(Facing::South.to_string(), "South");
+        assert_eq!(Facing::West.to_string(), "West");
+    }
+
+    #[test]
+    fn test_server_to_client_parse() {
+        // Test chat message parsing
+        let chat_msg = "SERVER chat user1 Hello World!";
+        if let Ok(ServerToClient::ChatMessage(username, message)) = chat_msg.parse() {
+            assert_eq!(username, "user1");
+            assert_eq!(message, " Hello World!");
+        } else {
+            panic!("Failed to parse chat message");
+        }
+
+        // Test error cases
+        assert!("SERVER Facing North".parse::<ServerToClient>().is_err());
+        assert!("SERVER Username test".parse::<ServerToClient>().is_err());
+    }
+
+    #[test]
+    fn test_client_to_server_formatting() {
+        // Test movement command
+        let move_cmd = ClientToServer::AttemptPlayerMove(Position::new(100, 200));
+        assert_eq!(move_cmd.as_line(), "pos 100 200\r\n");
+
+        // Test facing command
+        let face_cmd = ClientToServer::AttemptPlayerFacingChange(Facing::North);
+        assert_eq!(face_cmd.as_line(), "face North\r\n");
+
+        // Test authentication commands
+        let register_cmd = ClientToServer::Register("player1".to_string(), "pass123".to_string());
+        assert_eq!(register_cmd.as_line(), "register player1 pass123\r\n");
+
+        let login_cmd = ClientToServer::Login("player1".to_string(), "pass123".to_string());
+        assert_eq!(login_cmd.as_line(), "login player1 pass123\r\n");
+
+        // Test chat command
+        let chat_cmd = ClientToServer::ChatMessage("Hello everyone!".to_string());
+        assert_eq!(chat_cmd.as_line(), "chat Hello everyone!\r\n");
+
+        // Test username command
+        let username_cmd = ClientToServer::SetUsername("newname".to_string());
+        assert_eq!(username_cmd.as_line(), "username newname\r\n");
+
+        // Test position command
+        let pos_cmd = ClientToServer::SetPosition(50, 75);
+        assert_eq!(pos_cmd.as_line(), "pos 50 75\r\n");
+    }
+}

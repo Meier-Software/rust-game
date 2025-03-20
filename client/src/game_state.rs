@@ -564,8 +564,10 @@ impl GameState {
                         self.username,
                         self.password
                     );
-                    let login_msg = format!("login {} {}\r\n", self.username, self.password);
-                    let _ = self.nc.send_str(login_msg);
+                    let _ = self.nc.send(protocol::ClientToServer::Login(
+                        self.username.clone(),
+                        self.password.clone(),
+                    ));
                 }
                 AuthAction::Register => {
                     log::info!(
@@ -573,8 +575,10 @@ impl GameState {
                         self.username,
                         self.password
                     );
-                    let register_msg = format!("register {} {}\r\n", self.username, self.password);
-                    let _ = self.nc.send_str(register_msg);
+                    let _ = self.nc.send(protocol::ClientToServer::Register(
+                        self.username.clone(),
+                        self.password.clone(),
+                    ));
                 }
             }
         }
@@ -762,8 +766,9 @@ impl GameState {
             self.is_chatting = !self.is_chatting;
             if !self.is_chatting && !self.chat_input.is_empty() {
                 // Send the chat message when exiting chat mode if there's a message
-                let chat_event = protocol::ClientToServer::ChatMessage(self.chat_input.clone());
-                let _ = self.nc.send(chat_event);
+                let _ = self.nc.send(protocol::ClientToServer::ChatMessage(
+                    self.chat_input.clone()
+                ));
 
                 // Also display the message for the local player
                 self.players
@@ -1629,7 +1634,9 @@ impl GameState {
                 // In online mode, send the chat message to the server
                 if !self.nc.is_offline() {
                     let chat_msg = format!("chat {}\r\n", self.chat_input);
-                    let _ = self.nc.send_str(chat_msg);
+                    let _ = self.nc.send(protocol::ClientToServer::ChatMessage(
+                        self.chat_input.clone()
+                    ));
                 }
 
                 // Always display the message for the local player

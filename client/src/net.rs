@@ -89,7 +89,7 @@ impl NetClient {
     }
 
     /// Sends a raw string message to the server
-    pub fn send_str(&mut self, string: String) -> Result<(), NCError> {
+    fn send_str(&mut self, string: String) -> Result<(), NCError> {
         if self.offline_mode {
             log::debug!("Offline mode: Would send {}", string.trim());
             return Ok(());
