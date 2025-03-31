@@ -1,10 +1,27 @@
+
+/*
+pub mod client_to_server;
+pub use client_to_server::ClientToServer;
+
+pub mod server_to_client;
+pub use server_to_client::ServerToClient;
+
+pub mod core;
+pub use core::{Facing, Position};
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ProtocolError {
+    InvalidFacingDirection,
 #[derive(Debug, Clone)]
 pub enum ProtocolError {
     ServerLineUnparsable,
     InvalidFormat(String),
 }
+*/
+
 pub mod zones;
 use zones::ZoneLink;
+
 
 
 #[derive(Debug, Copy, Clone)]
