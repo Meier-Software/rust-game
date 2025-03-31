@@ -74,8 +74,8 @@ defmodule Client do
 
       {:error, :closed} ->
         # TODO Error handle a broken tcp connection
-        Logger.info("Player disconnected from the game.")
-        Process.exit(self(), "Player left.")
+        Logger.info("Client disconnected from the game.")
+        Process.exit(self(), "Client left.")
     end
   end
 

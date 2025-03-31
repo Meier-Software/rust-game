@@ -152,4 +152,12 @@ impl event::EventHandler<ggez::GameError> for GameState {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
         self.draw(ctx)
     }
+
+    fn text_input_event(
+        &mut self,
+        _ctx: &mut Context,
+        character: char,
+    ) -> Result<(), ggez::GameError> {
+        self.handle_text_input(_ctx, character)
+    }
 }

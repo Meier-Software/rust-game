@@ -1,0 +1,3 @@
+defmodule RPG do
+
+end

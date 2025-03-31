@@ -9,7 +9,13 @@ defmodule Zone do
         # Name, PID
       }
 
-    zone_data = %{:zonename => "#{name}", :playerlist => player_list}
+    entity_list = []  # List of entity PIDs
+
+    zone_data = %{
+      :zonename => "#{name}",
+      :playerlist => player_list,
+      :entitylist => entity_list
+    }
 
     loop_zone(zone_data)
   end
@@ -95,7 +101,7 @@ defmodule Zone do
         # Logger.info("Broadcasting message to all players: #{line}")
 
         for {k, player_pid} <- player_list do
-          # Logger.info("Broadcasting to player #{k}")
+          Logger.info("Broadcasting to player #{k}")
           send(player_pid, {:client_send, line})
         end
 

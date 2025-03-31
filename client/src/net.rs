@@ -6,13 +6,18 @@ use std::{
 
 use protocol::ClientToServer;
 
+/// Network client errors that can occur during communication
 #[derive(Debug)]
 pub enum NCError {
+    /// Failed to send data to the server
     SendError,
+    /// No new data available from the server
     NoNewData,
+    /// Connection-related errors with descriptive message
     ConnectionError(String),
 }
 
+/// Network client that handles communication with the game server
 pub struct NetClient {
     tcp: Option<TcpStream>,
     offline_mode: bool,
@@ -25,10 +30,12 @@ impl Default for NetClient {
 }
 
 impl NetClient {
+    /// Creates a new network client in online mode
     pub fn new() -> Self {
         Self::new_with_mode(false)
     }
 
+    /// Creates a new network client in offline mode
     pub fn new_offline() -> Self {
         Self::new_with_mode(true)
     }
@@ -42,29 +49,17 @@ impl NetClient {
             };
         }
 
-        let addr = "game.ablecorp.us:45250";
-        let stream = match TcpStream::connect(addr) {
+        let addr = std::env::var("GAME_HOSTNAME_PORT").unwrap_or("game.ablecorp.us:45250".to_owned());
+        let stream = match TcpStream::connect(&addr) {
             Ok(stream) => {
-                log::info!("Connected to server at {}", addr);
-                // Set non-blocking mode
-                let ret = stream.set_nonblocking(true);
-                match ret {
-                    Ok(_) => {}
-                    Err(err) => {
-                        log::error!(
-                            "Failed to set nonblocking for the following reason {}.",
-                            err
-                        );
-                    }
+                log::info!("Connected to server at {}", &addr);
+                if let Err(err) = stream.set_nonblocking(true) {
+                    log::error!("Failed to set nonblocking mode: {}", err);
                 }
-
                 Some(stream)
             }
             Err(e) => {
-                log::warn!(
-                    "Failed to connect to server: {}. Switching to offline mode.",
-                    e
-                );
+                log::warn!("Failed to connect to server: {}. Switching to offline mode.", e);
                 return Self {
                     tcp: None,
                     offline_mode: true,
@@ -78,34 +73,33 @@ impl NetClient {
         }
     }
 
+    /// Returns whether the client is in offline mode
     pub fn is_offline(&self) -> bool {
         self.offline_mode
     }
 
+    /// Sends a client-to-server message
     pub fn send(&mut self, cts: ClientToServer) -> Result<(), NCError> {
         if self.offline_mode {
-            // In offline mode, we just log the message and return success
             log::debug!("Offline mode: Would send {:?}", cts);
             return Ok(());
         }
 
-        // Online mode - send to server
         self.send_str(cts.as_line())
     }
 
-    pub fn send_str(&mut self, string: String) -> Result<(), NCError> {
+    /// Sends a raw string message to the server
+    fn send_str(&mut self, string: String) -> Result<(), NCError> {
         if self.offline_mode {
-            // In offline mode, we just log the message and return success
             log::debug!("Offline mode: Would send {}", string.trim());
             return Ok(());
         }
 
         log::trace!("Sending: {}", string.trim());
-        let a = string.to_string();
         match self.tcp.as_mut() {
-            Some(stream) => match stream.write(a.as_bytes()) {
+            Some(stream) => match stream.write(string.as_bytes()) {
                 Ok(bytes) => {
-                    log::trace!("Sent {} bytes to server.", bytes);
+                    log::trace!("Sent {} bytes to server", bytes);
                     Ok(())
                 }
                 Err(e) => {
@@ -113,54 +107,36 @@ impl NetClient {
                     Err(NCError::SendError)
                 }
             },
-            None => Err(NCError::ConnectionError(
-                "Server connection lost".to_string(),
-            )),
+            None => Err(NCError::ConnectionError("Server connection lost".to_string())),
         }
     }
 
+    /// Receives data from the server
     pub fn recv(&mut self) -> Result<String, NCError> {
         if self.offline_mode {
-            // In offline mode, we always return NoNewData
-            // This prevents the game from waiting for server responses
             return Err(NCError::NoNewData);
         }
 
         let mut buffer = [0; 1024];
-        use NCError::*;
         match self.tcp.as_mut() {
             Some(stream) => {
-                // Set non-blocking mode
                 stream.set_nonblocking(true).unwrap();
 
                 match stream.read(&mut buffer) {
-                    Ok(0) => Err(ConnectionError("Server closed connection".to_string())),
-                    Ok(n) => {
-                        let data = String::from_utf8_lossy(&buffer[0..n]).to_string();
-                        Ok(data)
-                    }
+                    Ok(0) => Err(NCError::ConnectionError("Server closed connection".to_string())),
+                    Ok(n) => Ok(String::from_utf8_lossy(&buffer[0..n]).to_string()),
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                         Err(NCError::NoNewData)
                     }
-                    Err(e) => Err(ConnectionError(e.to_string())),
+                    Err(e) => Err(NCError::ConnectionError(e.to_string())),
                 }
             }
-            None => Err(ConnectionError("Server connection lost".to_string())),
+            None => Err(NCError::ConnectionError("Server connection lost".to_string())),
         }
     }
 
-    // TODO: Swap this over to -> Result<protocol::ServerToClient, protocol::Error>
+    /// Parses a server message into a ServerToClient enum
     pub fn parse_server_message(&self, message: &str) -> Option<protocol::ServerToClient> {
-        // Extract the username from the message if it contains "USR-"
-        let _username_from_prefix = message
-            .split_whitespace()
-            .find(|part| part.starts_with("USR-(") && part.ends_with("):"))
-            .map(|part| {
-                part.trim_start_matches("USR-(")
-                    .trim_end_matches("):")
-                    .to_string()
-            });
-
         log::trace!("Parsing server message: {}", message);
 
         if message.contains("player_moved") {
@@ -340,5 +316,6 @@ impl NetClient {
         }
 
         None
+
     }
 }
